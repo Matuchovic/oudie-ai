@@ -8,13 +8,18 @@
     "build": "node scripts/lint-shaders.mjs && next build",
     "start": "next start",
     "preview": "node scripts/build-standalone.mjs && echo 'open dist/oudie-humanoid.html'",
-    "e2e": "electron scripts/e2e.cjs"
+    "e2e": "electron scripts/e2e.cjs",
+    "test": "node scripts/tracker.test.mjs"
   },
   "dependencies": {
-    "next": "15.1.9",
+    "@supabase/ssr": "^0.12.6",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "^15.5.25",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "three": "0.172.0",
-    "@supabase/supabase-js": "^2.45.4"
+    "three": "0.172.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
   }
 }

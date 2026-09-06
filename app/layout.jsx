@@ -1,5 +1,6 @@
 import './globals.css';
 import PWA from '@/components/PWA';
+import Stage from '@/components/humanoid/Stage';
 
 export const metadata = {
   title: 'Oudie',
@@ -24,8 +25,6 @@ export const viewport = {
   colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
-  // The canvas fills the screen and there is nothing to read at 2x, so
-  // pinch-zoom would only ever be an accident.
   maximumScale: 1,
   viewportFit: 'cover',
 };
@@ -34,7 +33,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="cs">
       <body>
-        {children}
+        {/* Stage drží canvas. Musí obalovat children, ne stát vedle nich,
+            aby přežil přechod mezi routami. */}
+        <Stage>{children}</Stage>
         <PWA />
       </body>
     </html>
