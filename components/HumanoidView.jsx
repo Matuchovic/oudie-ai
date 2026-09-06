@@ -14,6 +14,7 @@ export default function HumanoidView({ onReady }) {
   const skyRef = useRef(null);
   const i18nRef = useRef(null);
   const skyApi = useRef(null);
+  const flashRef = useRef(null);
   const apiRef = useRef(null);
   const [label, setLabel] = useState('ASSEMBLING… 0%');
   const [state, setState] = useState('assembling');
@@ -54,16 +55,24 @@ export default function HumanoidView({ onReady }) {
   const team = view === 'team';
 
   function toggleView() {
-    const next = team ? 'face' : 'team';
-    setView(next);
-    if (next === 'team') skyApi.current?.show();
-    else { skyApi.current?.hide(); apiRef.current?.replay(); }
+    if (flashRef.current?.classList.contains('go')) return;
+    const f = flashRef.current;
+    if (f) { f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+    // Swap at the peak of the burst, not before it and not after.
+    setTimeout(() => {
+      const next = team ? 'face' : 'team';
+      setView(next);
+      if (next === 'team') skyApi.current?.show();
+      else { skyApi.current?.hide(); apiRef.current?.replay(); }
+    }, 200);
+    setTimeout(() => f?.classList.remove('go'), 660);
   }
 
   return (
     <div className="stage">
       <canvas ref={canvasRef} className={team ? 'dim' : ''} />
       <div className="sky" ref={skyRef} />
+      <div className="flash" ref={flashRef} />
       {!team && <div className="status">{label}</div>}
 
       {diag && (

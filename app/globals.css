@@ -102,3 +102,23 @@ html, body {
 .stage canvas { transition: opacity 0.4s ease; }
 .stage canvas.dim { opacity: 0; }
 .bar, .status, .diag { z-index: 5; }
+
+/* Measured off the reference: the scene blooms into a blue radial flash for
+   ~200ms, then cuts. Swapping at the peak means neither view is ever seen
+   fading — you see a burst, then something else behind it. */
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 46%,
+    rgba(120, 205, 255, 0.95) 0%, rgba(38, 120, 210, 0.55) 34%, rgba(0, 0, 0, 0) 68%);
+}
+.flash.go { animation: flash-burst 0.62s ease-out; }
+@keyframes flash-burst {
+  0%   { opacity: 0; transform: scale(0.55); }
+  32%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+@media (prefers-reduced-motion: reduce) { .flash.go { animation: none; } }

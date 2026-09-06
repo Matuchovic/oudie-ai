@@ -37,15 +37,35 @@ const CSS = `
 .cn-flow path{fill:none;stroke:#2f8fd0;stroke-width:1.4;opacity:.20}
 .cn-trace{fill:none;stroke:#2f8fd0;stroke-width:1.1;opacity:.34}
 .cn-trace-dot{fill:#4fc3f7;opacity:.75}
-.cn-link{fill:none;stroke:#38bdf8;stroke-width:1;opacity:.16}
+.cn-link{fill:none;stroke:#38bdf8;stroke-width:1;opacity:.16;
+  transition:opacity .3s ease,stroke-width .3s ease,stroke .3s ease}
+.cn-link.cn-lit{opacity:.85;stroke-width:2;stroke:#8fe0ff}
+
+/* Traffic. Each dot rides an actual delegation edge, so what you see
+   moving is the same graph the orchestrator routes through. */
+.cn-pulse{fill:#9fe8ff;offset-rotate:0deg;
+  animation:cn-run 4.2s linear infinite;pointer-events:none}
+.cn-pulse.cn-gold{fill:#ffd479}
+@keyframes cn-run{from{offset-distance:0%;opacity:0}
+  8%{opacity:.95}88%{opacity:.95}to{offset-distance:100%;opacity:0}}
 .cn-link.cn-link-off{stroke-dasharray:5 7;opacity:.09}
 
 .cn-ring{fill:none;stroke:#f0c34a;stroke-width:5}
+.cn-ticks{transform-box:fill-box;transform-origin:center;animation:cn-spin 90s linear infinite}
 .cn-ring-soft{fill:none;stroke:#f0c34a;stroke-width:13;opacity:.16}
 .cn-tick{stroke:#f0c34a;stroke-width:2.4;opacity:.8}
 .cn-core-dot{fill:#7fdcff}
 
-.cn-node{cursor:pointer}
+.cn-node{cursor:pointer;transition:opacity .3s ease}
+/* Selecting an agent dims everything it cannot reach. The picture then
+   answers "who can this one hand work to" without a legend. */
+.cn-root.cn-focus .cn-node{opacity:.22}
+.cn-root.cn-focus .cn-node.cn-near{opacity:1}
+.cn-root.cn-focus .cn-pulse{opacity:0!important;animation:none}
+
+@keyframes cn-arrive{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
+.cn-root.cn-on .cn-node{transform-box:fill-box;transform-origin:center;
+  animation:cn-arrive .7s cubic-bezier(.16,1,.3,1) backwards}
 .cn-node circle.cn-hit{fill:transparent}
 .cn-node .cn-ring2{fill:#0a1420;stroke-width:2.6}
 .cn-node .cn-halo{fill:none;stroke-width:9;opacity:.14}
@@ -85,7 +105,9 @@ const CSS = `
 .cn-card button:hover{color:#fff;border-color:rgba(56,189,248,.6)}
 
 @media (prefers-reduced-motion:reduce){
-  .cn-node.cn-off .cn-ring2,.cn-node.cn-busy .cn-halo,.cn-core-dot{animation:none}
+  .cn-node.cn-off .cn-ring2,.cn-node.cn-busy .cn-halo,.cn-core-dot,
+  .cn-pulse,.cn-ticks,.cn-root.cn-on .cn-node{animation:none}
+  .cn-pulse{display:none}
 }
 `;
 
@@ -150,6 +172,21 @@ export function createConstellation(container, opts = {}) {
     el('circle', { class: 'cn-trace-dot', cx: midX, cy: a.y + drop, r: 4.5 }, gTrace);
   }
 
+  const gPulse = el('g', { class: 'cn-pulses' }, svg);
+
+  /* CSS Motion Path rather than SMIL: it composites on the GPU and does
+     not need a rAF loop, so 70 dots cost essentially nothing. */
+  function traffic(d, count, gold) {
+    for (let i = 0; i < count; i++) {
+      el('circle', {
+        class: `cn-pulse${gold ? ' cn-gold' : ''}`,
+        r: gold ? 3.4 : 2.6,
+        cx: 0, cy: 0,
+        style: `offset-path:path('${d}');animation-duration:${(3.2 + rand() * 3).toFixed(2)}s;animation-delay:-${(rand() * 6).toFixed(2)}s`,
+      }, gPulse);
+    }
+  }
+
   /* --- delegation links -------------------------------------------
      Every edge in the roster, drawn. If two agents are connected on
      screen, work can genuinely travel between them. */
@@ -159,21 +196,28 @@ export function createConstellation(container, opts = {}) {
     const mx = (A.x + B.x) / 2;
     const my = (A.y + B.y) / 2 + (rand() - 0.5) * 70;
     const dead = A.state === 'off' || B.state === 'off';
+    const d = `M ${A.x} ${A.y} Q ${mx} ${my} ${B.x} ${B.y}`;
     el('path', {
       class: `cn-link${dead ? ' cn-link-off' : ''}`,
-      d: `M ${A.x} ${A.y} Q ${mx} ${my} ${B.x} ${B.y}`,
+      d, 'data-a': e.from, 'data-b': e.to,
     }, gLink);
+    if (!dead) traffic(d, 1, A.state === 'busy');
   }
   for (const a of AGENTS) {
+    const d = `M ${a.x} ${a.y} Q ${(a.x + CORE.x) / 2} ${(a.y + CORE.y) / 2 + (rand() - 0.5) * 90} ${CORE.x} ${CORE.y}`;
     el('path', {
       class: `cn-link${a.state === 'off' ? ' cn-link-off' : ''}`,
-      d: `M ${a.x} ${a.y} Q ${(a.x + CORE.x) / 2} ${(a.y + CORE.y) / 2 + (rand() - 0.5) * 90} ${CORE.x} ${CORE.y}`,
+      d, 'data-a': a.id, 'data-b': '@core',
     }, gLink);
+    // Busier agents send more. Idle ones still tick over so the graph
+    // never looks frozen.
+    if (a.state !== 'off') traffic(d, a.state === 'busy' ? 3 : 2, a.state === 'busy');
   }
 
   /* --- core -------------------------------------------------------- */
   el('circle', { class: 'cn-ring-soft', cx: CORE.x, cy: CORE.y, r: CORE.r }, gCore);
   el('circle', { class: 'cn-ring', cx: CORE.x, cy: CORE.y, r: CORE.r }, gCore);
+  const gTicks = el('g', { class: 'cn-ticks' }, gCore);
   for (let i = 0; i < 48; i++) {
     const th = (i / 48) * Math.PI * 2;
     const r0 = CORE.r + 4;
@@ -182,7 +226,7 @@ export function createConstellation(container, opts = {}) {
       class: 'cn-tick',
       x1: CORE.x + Math.cos(th) * r0, y1: CORE.y + Math.sin(th) * r0,
       x2: CORE.x + Math.cos(th) * r1, y2: CORE.y + Math.sin(th) * r1,
-    }, gCore);
+    }, gTicks);
   }
   for (let i = 0; i < 420; i++) {
     const th = rand() * Math.PI * 2;
@@ -217,6 +261,9 @@ export function createConstellation(container, opts = {}) {
       'text-anchor': a.side === 'left' ? 'end' : 'start',
     }, g);
     el('circle', { class: 'cn-hit', cx: a.x, cy: a.y, r: 30 }, g);
+    // Ordered by distance from the core: the graph grows outward.
+    const dist = Math.hypot(a.x - CORE.x, a.y - CORE.y);
+    g.style.animationDelay = `${(0.12 + dist / 2600).toFixed(3)}s`;
 
     const paint = () => { label.textContent = a[i18n.lang].name; };
     paint();
@@ -243,7 +290,27 @@ export function createConstellation(container, opts = {}) {
   card.setAttribute('role', 'dialog');
   document.body.appendChild(card);
 
+  function lightSubgraph(id) {
+    root.classList.add('cn-focus');
+    const reach = new Set([id, ...(BY_ID[id]?.to ?? [])]);
+    // Anyone who can hand work TO this agent counts as connected too.
+    for (const a of AGENTS) if (a.to.includes(id)) reach.add(a.id);
+    nodeEls.forEach((r, k) => r.g.classList.toggle('cn-near', reach.has(k)));
+    gLink.querySelectorAll('.cn-link').forEach((p) => {
+      const a = p.getAttribute('data-a');
+      const b = p.getAttribute('data-b');
+      p.classList.toggle('cn-lit', a === id || b === id);
+    });
+  }
+
+  function clearSubgraph() {
+    root.classList.remove('cn-focus');
+    nodeEls.forEach((r) => r.g.classList.remove('cn-near'));
+    gLink.querySelectorAll('.cn-lit').forEach((p) => p.classList.remove('cn-lit'));
+  }
+
   function closeCard() {
+    clearSubgraph();
     card.classList.remove('cn-card-on');
     if (selected) nodeEls.get(selected)?.g.classList.remove('cn-sel');
     selected = null;
@@ -266,6 +333,7 @@ export function createConstellation(container, opts = {}) {
     if (!rec) return;
     selected = id;
     rec.g.classList.add('cn-sel');
+    lightSubgraph(id);
 
     const a = rec.agent;
     const t = i18n.t;

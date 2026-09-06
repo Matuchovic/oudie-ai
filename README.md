@@ -139,3 +139,34 @@ Bez toho `capturePage()` vrací snímek z prvního vykreslení a pozdější zm�
 ignoruje: karta agenta byla v DOMu se správnou geometrií, stylem i textem, a
 na snímku nebyla. Ověřeno tak, že se nekreslil ani obyčejný div vytvořený
 skriptem. Harness, který mlčky vrací zastaralé snímky, je horší než žádný.
+
+## Animace v konstelaci
+
+**Provoz po hranách.** Tečky putují po skutečných delegačních linkách, ne
+po dekoraci. Zlaté jedou z agentů ve stavu `busy`, cyanové z ostatních.
+Dělá se to přes CSS Motion Path (`offset-path`), takže to kompozituje
+grafika a 70 teček nestojí prakticky nic — žádná rAF smyčka.
+
+**Zaostření podgrafu.** Klik na agenta zhasne všechno, kam nedosáhne.
+Zůstanou svítit ti, komu předává, i ti, kdo předávají jemu. Obrázek pak
+odpoví na otázku „komu tenhle může dát práci" bez legendy.
+
+**Příchod uzlů** je odstupňovaný podle vzdálenosti od jádra, takže graf
+při přepnutí vyroste zevnitř ven místo aby naskočil.
+
+**Přechod mezi pohledy** — 200 ms. Scéna se rozzáří do modrého radiálního
+bloomu a **výměna proběhne v jeho vrcholu**, takže oko nikdy nevidí žádný
+z pohledů mizet: vidí záblesk a za ním něco jiného. Časování je odečtené
+z referenčního záznamu po půlsekundách.
+
+Všechno respektuje `prefers-reduced-motion`.
+
+## Ladicí páky konstelace
+
+| kde | co |
+|---|---|
+| `constellation.js` → `traffic(d, count, gold)` | hustota provozu na hraně |
+| `.cn-pulse` `animation-duration` | rychlost teček |
+| `.cn-root.cn-focus .cn-node` opacity | jak silně zhasne zbytek grafu |
+| `#flash` keyframes | průběh záblesku; swap je pevně na 200 ms |
+| `roster.js` → `x`, `y` | rozmístění uzlů ve viewBoxu 1600×900 |
