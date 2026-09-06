@@ -110,3 +110,32 @@ Vyrenderuje timeline ve skutečném Chromiu (WebGL2) do `/tmp/shots`.
 `scripts/preview_render.py` je jen rychlá kontrola siluety — **není to
 test rendereru**, protože shader reimplementuje. Dvakrát se shodl sám se
 sebou a rozešel se s GPU. Vždycky ověřuj `shoot.cjs`.
+
+## Konstelace
+
+`components/constellation/roster.js` je jediný zdroj pravdy. Každý agent
+nese `can` (co umí) a `to` (komu smí předat práci). Z těch samých dat se
+kreslí hrany **i** se bude řídit orchestrátor — když je linka vidět, práce
+po ní opravdu může jít. `canDelegate(a, b)` navíc odmítne cíl ve stavu
+`off`, takže nenapojený agent nemůže dostat úkol.
+
+Stavy: `live` cyanová · `busy` zlatá · `off` přerušovaná a rotující.
+Backend je za běhu přepíná přes `setState(id, state)`.
+
+Přidat agenta = přidat záznam do rosteru. Uzel, popisek, hrany, karta
+i překlady naskočí samy.
+
+## Jazyk
+
+`components/i18n.js`. Čeština je výchozí, angličtina na jedno tlačítko.
+`detectLanguageCommand()` chytá i mluvené „mluv anglicky" / „speak Czech",
+takže se dá přepnout větou. Vrací `null`, když věta není jazykový příkaz —
+tou se pak model nechá projít nedotčenou.
+
+## Poznámka k harness
+
+`shoot.cjs` po každé změně DOMu **vynutí překreslení změnou velikosti okna**.
+Bez toho `capturePage()` vrací snímek z prvního vykreslení a pozdější změny
+ignoruje: karta agenta byla v DOMu se správnou geometrií, stylem i textem, a
+na snímku nebyla. Ověřeno tak, že se nekreslil ani obyčejný div vytvořený
+skriptem. Harness, který mlčky vrací zastaralé snímky, je horší než žádný.

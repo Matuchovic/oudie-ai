@@ -63,6 +63,7 @@ html, body {
   font: inherit;
   font-size: clamp(10px, 1.5vw, 12px);
   letter-spacing: 0.1em;
+  white-space: nowrap;
   padding: 9px 15px;
   border-radius: 999px;
   cursor: pointer;
@@ -95,3 +96,9 @@ html, body {
   color: #ff8a6a;
   white-space: pre-wrap;
 }
+
+/* Constellation sits over the canvas; the humanoid fades beneath it. */
+.sky { position: fixed; inset: 0; z-index: 2; }
+.stage canvas { transition: opacity 0.4s ease; }
+.stage canvas.dim { opacity: 0; }
+.bar, .status, .diag { z-index: 5; }

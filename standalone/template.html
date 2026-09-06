@@ -22,6 +22,11 @@
     touch-action: none;
   }
   #stage { position: fixed; inset: 0; }
+  /* Constellation sits above the canvas; the humanoid fades under it. */
+  #sky { position: fixed; inset: 0; z-index: 2; }
+  #bar, #status, #diag, #hint { z-index: 5; }
+  #stage { transition: opacity .4s ease; }
+  #stage.dim { opacity: 0; }
   canvas { display: block; width: 100%; height: 100%; cursor: grab; }
   canvas:active { cursor: grabbing; }
 
@@ -61,6 +66,7 @@
     font: inherit;
     font-size: clamp(10px, 1.5vw, 12px);
     letter-spacing: .12em;
+    white-space: nowrap;
     padding: 9px 15px;
     border-radius: 999px;
     cursor: pointer;
@@ -91,10 +97,13 @@
 </head>
 <body>
   <div id="stage"><canvas id="c"></canvas></div>
+  <div id="sky"></div>
   <div id="status">ASSEMBLING… 0%</div>
   <div id="diag"></div>
   <div id="hint">drag to orbit</div>
   <div id="bar">
+    <button id="b-view">TÝM</button>
+    <button id="b-lang">EN</button>
     <button id="b-replay">REPLAY</button>
     <button id="b-listen" aria-pressed="true">LISTENING</button>
     <button id="b-speak" aria-pressed="false">SPEAKING</button>
@@ -127,6 +136,36 @@
   document.getElementById('b-replay').onclick = function () { api.replay(); sync(); };
   bListen.onclick = function () { api.setState('listening'); sync(); };
   bSpeak.onclick = function () { api.setState('speaking'); sync(); };
+  var i18n = createI18n('cs');
+  var sky = createConstellation(document.getElementById('sky'), {
+    i18n: i18n,
+    onSelect: function (a) { console.log('agent', a.id); }
+  });
+
+  var view = 'team';
+  var bView = document.getElementById('b-view');
+  var bLang = document.getElementById('b-lang');
+
+  function applyView() {
+    var team = view === 'team';
+    document.getElementById('stage').classList.toggle('dim', team);
+    if (team) sky.show(); else sky.hide();
+    bView.textContent = team ? i18n.t.showFace : i18n.t.showTeam;
+    status.style.opacity = team ? 0 : 1;
+  }
+  bView.onclick = function () {
+    view = view === 'team' ? 'face' : 'team';
+    if (view === 'face') api.replay();
+    applyView();
+  };
+  bLang.onclick = function () {
+    i18n.toggle();
+    bLang.textContent = i18n.lang === 'cs' ? 'EN' : 'CS';
+    applyView();
+  };
+  i18n.onChange(applyView);
+  applyView();
+
   var bSafe = document.getElementById('b-safe');
   var safe = false;
   bSafe.onclick = function () {

@@ -24,6 +24,8 @@ execFileSync(process.execPath, [resolve(root, 'scripts/lint-shaders.mjs')], {
 });
 
 const bundle = [
+  '/* --- rng.js --- */',
+  strip('components/rng.js'),
   '/* --- geometry.js --- */',
   strip('components/humanoid/geometry.js'),
   '/* --- shaders.js --- */',
@@ -32,6 +34,12 @@ const bundle = [
   strip('components/humanoid/bloom.js'),
   '/* --- runtime.js --- */',
   strip('components/humanoid/runtime.js'),
+  '/* --- i18n.js --- */',
+  strip('components/i18n.js'),
+  '/* --- roster.js --- */',
+  strip('components/constellation/roster.js'),
+  '/* --- constellation.js --- */',
+  strip('components/constellation/constellation.js'),
 ].join('\n\n');
 
 const html = readFileSync(resolve(root, 'standalone/template.html'), 'utf8').replace(
@@ -60,3 +68,36 @@ writeFileSync(
     '\n</script>\n</body>\n</html>\n'
 );
 console.log('dist/test.html (headless harness target)');
+
+/* The inlined bundle shares one scope, so two modules declaring the same
+   top-level name is a SyntaxError that kills the whole page. That exact
+   bug shipped once (mulberry32 in two files). Catch it here instead. */
+{
+  const declared = new Map();
+  const DECL = /^(?:const|let|function|class)\s+([A-Za-z_$][\w$]*)/gm;
+  const chunks = bundle.split(/\/\* --- (.+?) --- \*\//);
+  let fail = false;
+  for (let i = 1; i < chunks.length; i += 2) {
+    const file = chunks[i];
+    const src = (chunks[i + 1] || '').replace(/`[\s\S]*?`/g, '``');
+    for (const m of src.matchAll(DECL)) {
+      const name = m[1];
+      if (declared.has(name)) {
+        console.error(`FAIL: "${name}" declared in both ${declared.get(name)} and ${file}`);
+        fail = true;
+      } else {
+        declared.set(name, file);
+      }
+    }
+  }
+  if (fail) process.exit(1);
+  console.log(`no name collisions across ${declared.size} top-level declarations`);
+}
+
+for (const bad of ['import ', 'export ']) {
+  if (bundle.includes(bad)) {
+    console.error(`FAIL: bundle still contains "${bad.trim()}"`);
+    process.exit(1);
+  }
+}
+console.log('bundle clean — no module syntax left');

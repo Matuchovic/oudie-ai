@@ -28,6 +28,19 @@ app.disableHardwareAcceleration();
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* capturePage() in this offscreen/SwiftShader setup returns the frame as
+   it was at first paint and ignores later DOM changes — a plain div added
+   by script never showed up. Nudging the window size forces a full
+   repaint. Without this the harness silently reports stale frames, which
+   is worse than no harness at all. */
+async function repaint(win) {
+  const [w, h] = win.getSize();
+  win.setSize(w + 1, h);
+  await sleep(260);
+  win.setSize(w, h);
+  await sleep(420);
+}
+
 app.whenReady().then(async () => {
   fs.mkdirSync(OUT, { recursive: true });
 
@@ -46,6 +59,23 @@ app.whenReady().then(async () => {
   await win.loadURL("file://" + PAGE + (process.env.QS || ""));
   await sleep(1200); // let the context come up and the first frames run
 
+  // Constellation is the default view now.
+  await repaint(win);
+  const img0 = await win.webContents.capturePage();
+  fs.writeFileSync(path.join(OUT, '00_team.png'), img0.toPNG());
+  await win.webContents.executeJavaScript("document.querySelector('.cn-node[data-id=\"chief\"]').dispatchEvent(new MouseEvent('click',{bubbles:true}))");
+  await sleep(400);
+  await repaint(win);
+  const img1 = await win.webContents.capturePage();
+  fs.writeFileSync(path.join(OUT, '00b_card.png'), img1.toPNG());
+  await win.webContents.executeJavaScript("document.getElementById('b-lang').click()");
+  await sleep(400);
+  await repaint(win);
+  const img2 = await win.webContents.capturePage();
+  fs.writeFileSync(path.join(OUT, '00c_en.png'), img2.toPNG());
+  await win.webContents.executeJavaScript("document.getElementById('b-lang').click();document.getElementById('b-view').click()");
+  await sleep(400);
+
   const marks = [
     ['01_assembling_early', 0],
     ['02_assembling_mid', 2200],
@@ -56,13 +86,15 @@ app.whenReady().then(async () => {
 
   const extra = async (name, js) => {
     await win.webContents.executeJavaScript(js);
-    await sleep(900);
+    await sleep(700);
+    await repaint(win);
     const img = await win.webContents.capturePage();
     fs.writeFileSync(path.join(OUT, `${name}.png`), img.toPNG());
   };
 
   for (const [name, wait] of marks) {
     if (wait) await sleep(wait);
+    await repaint(win);
     const img = await win.webContents.capturePage();
     fs.writeFileSync(path.join(OUT, `${name}.png`), img.toPNG());
 

@@ -3,18 +3,25 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createHumanoid } from './humanoid/runtime.js';
+import { createConstellation } from './constellation/constellation.js';
+import { createI18n } from './i18n.js';
 
 /* Thin wrapper. All the work lives in runtime.js, which the standalone
    preview mounts too — so what you see in dist/apex-humanoid.html is
    what you get here, byte for byte. */
 export default function HumanoidView({ onReady }) {
   const canvasRef = useRef(null);
+  const skyRef = useRef(null);
+  const i18nRef = useRef(null);
+  const skyApi = useRef(null);
   const apiRef = useRef(null);
   const [label, setLabel] = useState('ASSEMBLING… 0%');
   const [state, setState] = useState('assembling');
   const [mic, setMic] = useState(null);
   const [diag, setDiag] = useState(null);
   const [safe, setSafe] = useState(false);
+  const [view, setView] = useState('team');
+  const [lang, setLang] = useState('cs');
 
   useEffect(() => {
     const api = createHumanoid(THREE, canvasRef.current, {
@@ -24,21 +31,40 @@ export default function HumanoidView({ onReady }) {
       },
     });
     apiRef.current = api;
+
+    const i18n = createI18n('cs');
+    i18nRef.current = i18n;
+    skyApi.current = createConstellation(skyRef.current, { i18n });
+    skyApi.current.show();
+    const stopLang = i18n.onChange(setLang);
+
     onReady?.(api);
     // Poll rather than push: cheap, and it keeps the render loop allocation-free.
     const t = setInterval(() => setDiag(api.diagnostics()), 500);
     return () => {
       clearInterval(t);
+      stopLang();
+      skyApi.current?.dispose();
       api.dispose();
     };
   }, [onReady]);
 
   const busy = state === 'assembling';
+  const t = i18nRef.current?.t;
+  const team = view === 'team';
+
+  function toggleView() {
+    const next = team ? 'face' : 'team';
+    setView(next);
+    if (next === 'team') skyApi.current?.show();
+    else { skyApi.current?.hide(); apiRef.current?.replay(); }
+  }
 
   return (
     <div className="stage">
-      <canvas ref={canvasRef} />
-      <div className="status">{label}</div>
+      <canvas ref={canvasRef} className={team ? 'dim' : ''} />
+      <div className="sky" ref={skyRef} />
+      {!team && <div className="status">{label}</div>}
 
       {diag && (
         <div className="diag">
@@ -54,7 +80,9 @@ export default function HumanoidView({ onReady }) {
       )}
 
       <div className="bar" role="group" aria-label="Humanoid controls">
-        <button onClick={() => apiRef.current?.replay()}>Replay</button>
+        <button onClick={toggleView}>{team ? (t?.showFace ?? 'Show face') : (t?.showTeam ?? 'Show team')}</button>
+        <button onClick={() => i18nRef.current?.toggle()}>{lang === 'cs' ? 'EN' : 'CS'}</button>
+        <button onClick={() => apiRef.current?.replay()}>{t?.replay ?? 'Replay'}</button>
         <button
           aria-pressed={state === 'listening'}
           disabled={busy}
