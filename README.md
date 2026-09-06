@@ -305,3 +305,23 @@ překryl se stavovým řádkem appky a konstelace prosvítala do přihlášení.
 
 Humanoid je ve všech třech **tentýž** — stejná instance, stejná geometrie.
 Mění se jen chrome kolem něj.
+
+## Testy
+
+```bash
+node scripts/tracker.test.mjs                  # sledování, syntetické snímky
+node scripts/build-standalone.mjs              # kolize jmen, shadery, CSS závorky
+npx next build && npx next start -p 3111 &
+xvfb-run -a electron scripts/e2e.cjs           # boot → login na skutečné appce
+```
+
+Ten poslední existuje kvůli konkrétní chybě. Standalone soubor a Next appka
+jsou **dvě různé cesty kódu** a dlouho se testovala jen ta první. Appka pak
+šla ven rozbitá: boot předal řízení přihlášení, které se nikdy neobjevilo,
+protože se čekalo na ověření session **dřív**, než se formulář vykreslil —
+a boot už mezitím zmizel. Ve standalone se to projevit nemohlo, protože tam
+žádný Supabase není.
+
+Oprava je v pořadí: formulář se ukáže hned, session se ověří až potom, a
+dotaz má čtyřsekundový strop. Vracející se uživatel zahlédne formulář na
+okamžik; opačné pořadí stálo všechny ostatní mrtvou obrazovku.

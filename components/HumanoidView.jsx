@@ -12,6 +12,16 @@ import { createBoot } from './boot/boot.js';
 /* Thin wrapper. All the work lives in runtime.js, which the standalone
    preview mounts too — so what you see in dist/apex-humanoid.html is
    what you get here, byte for byte. */
+/* A malformed URL makes createClient throw, and an exception here would
+   take the whole mount with it — no boot, no login, nothing. */
+function safeAuth() {
+  try {
+    return createSupabaseAuth() ?? stubAuth();
+  } catch {
+    return stubAuth();
+  }
+}
+
 export default function HumanoidView({ onReady }) {
   const canvasRef = useRef(null);
   const skyRef = useRef(null);
@@ -50,7 +60,7 @@ export default function HumanoidView({ onReady }) {
     const gate = createLogin({
       i18n,
       face: api,
-      auth: createSupabaseAuth() ?? stubAuth(),
+      auth: safeAuth(),
       onSignedIn: () => screen('app'),
     });
     loginRef.current = gate;
@@ -60,7 +70,7 @@ export default function HumanoidView({ onReady }) {
       i18n,
       onDone: () => {
         screen('login');
-        gate.gate().then((user) => { if (user) screen('app'); });
+        gate.resume().then((user) => { if (user) screen('app'); });
       },
     });
     bootRef.current = boot;

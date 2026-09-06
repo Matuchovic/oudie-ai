@@ -258,7 +258,7 @@
     face: api, i18n: i18n,
     onDone: function () {
       screen('login');
-      login.gate().then(function (user) { if (user) screen('app'); });
+      login.resume().then(function (user) { if (user) screen('app'); });
     }
   });
   window.__login = login;

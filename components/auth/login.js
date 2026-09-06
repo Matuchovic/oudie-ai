@@ -242,15 +242,25 @@ export function createLogin(opts = {}) {
   return {
     show,
     hide,
-    /* Resolve who is signed in before showing anything, so a returning
-       session never sees the form flash past. */
-    async gate() {
-      try {
-        const user = await auth.currentUser();
-        if (user) { root.hidden = true; return user; }
-      } catch { /* any failure counts as signed out */ }
+    /* Show the form first, then check for an existing session.
+
+       The other order — await the session, then decide what to render —
+       leaves a blank screen for as long as the auth server takes to
+       answer, and forever if it never does. The boot screen has already
+       been dismissed by then, so there is nothing underneath. Showing
+       first costs a returning user a brief glimpse of a form; awaiting
+       first costs everyone else a dead app. */
+    async resume() {
       show();
-      return null;
+      let user = null;
+      try {
+        user = await Promise.race([
+          auth.currentUser(),
+          new Promise((r) => setTimeout(() => r(null), 4000)),
+        ]);
+      } catch { /* any failure counts as signed out */ }
+      if (user) hide();
+      return user;
     },
     async signOut() {
       await auth.signOut();
