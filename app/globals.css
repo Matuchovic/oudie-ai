@@ -1,0 +1,78 @@
+:root {
+  --bg-top: #141a26;
+  --bg-bot: #05070c;
+  --cyan: #35c6ff;
+  --amber: #ffb02e;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(178deg, var(--bg-top) 0%, #0a0e18 42%, var(--bg-bot) 100%);
+  font-family: var(--mono);
+  color: #cfe9f7;
+  -webkit-font-smoothing: antialiased;
+  touch-action: none;
+}
+
+.stage { position: fixed; inset: 0; }
+.stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+
+/* Fixed mid-right, letter-spaced, tabular figures so the percentage does
+   not jitter as it counts up. Matches the reference placement. */
+.status {
+  position: fixed;
+  right: clamp(16px, 6vw, 92px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: clamp(9px, 1.55vw, 12px);
+  letter-spacing: 0.22em;
+  color: var(--cyan);
+  text-shadow: 0 0 12px rgba(53, 198, 255, 0.75);
+  white-space: nowrap;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(10, 16, 28, 0.72);
+  border: 1px solid rgba(53, 198, 255, 0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.bar button {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #7fa6bd;
+  font: inherit;
+  font-size: clamp(10px, 1.5vw, 12px);
+  letter-spacing: 0.1em;
+  padding: 9px 15px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s, border-color 0.18s;
+}
+.bar button:hover:not(:disabled) { color: #d6f2ff; }
+.bar button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.bar button:disabled { opacity: 0.35; cursor: default; }
+.bar button[aria-pressed='true'] {
+  color: var(--amber);
+  border-color: rgba(255, 176, 46, 0.5);
+  background: rgba(255, 176, 46, 0.09);
+}

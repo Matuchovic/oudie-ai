@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oudie — humanoid view</title>
+<style>
+  :root {
+    --bg-top: #141a26;
+    --bg-bot: #05070c;
+    --cyan: #35c6ff;
+    --cyan-dim: #1d7fa8;
+    --amber: #ffb02e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: linear-gradient(178deg, var(--bg-top) 0%, #0a0e18 42%, var(--bg-bot) 100%);
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    -webkit-font-smoothing: antialiased;
+    color: #cfe9f7;
+    touch-action: none;
+  }
+  #stage { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  /* Status readout. In the reference this sits mid-right, small,
+     letter-spaced, and never moves. */
+  #status {
+    position: fixed;
+    right: clamp(16px, 6vw, 92px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: clamp(9px, 1.55vw, 12px);
+    letter-spacing: 0.22em;
+    color: var(--cyan);
+    text-shadow: 0 0 12px rgba(53,198,255,.75);
+    white-space: nowrap;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #bar {
+    position: fixed;
+    left: 50%; transform: translateX(-50%);
+    bottom: max(20px, env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(10,16,28,.72);
+    border: 1px solid rgba(53,198,255,.16);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  button {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #7fa6bd;
+    font: inherit;
+    font-size: clamp(10px, 1.5vw, 12px);
+    letter-spacing: .12em;
+    padding: 9px 15px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .18s, background .18s, border-color .18s;
+  }
+  button:hover { color: #d6f2ff; }
+  button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button[aria-pressed="true"] {
+    color: var(--amber);
+    border-color: rgba(255,176,46,.5);
+    background: rgba(255,176,46,.09);
+  }
+  #hint {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 52px);
+    font-size: 10px; letter-spacing: .18em; color: rgba(127,166,189,.5);
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) { #hint { display: none; } }
+</style>
+</head>
+<body>
+  <div id="stage"><canvas id="c"></canvas></div>
+  <div id="status">ASSEMBLING… 0%</div>
+  <div id="hint">drag to orbit</div>
+  <div id="bar">
+    <button id="b-replay">REPLAY</button>
+    <button id="b-listen" aria-pressed="true">LISTENING</button>
+    <button id="b-speak" aria-pressed="false">SPEAKING</button>
+    <button id="b-mic">MIC</button>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*__BUNDLE__*/
+
+(function () {
+  var canvas = document.getElementById('c');
+  var status = document.getElementById('status');
+  var bListen = document.getElementById('b-listen');
+  var bSpeak = document.getElementById('b-speak');
+  var bMic = document.getElementById('b-mic');
+
+  var api = createHumanoid(THREE, canvas, {
+    onStatus: function (s) { status.textContent = s.label; }
+  });
+
+  function sync() {
+    var s = api.getState();
+    bListen.setAttribute('aria-pressed', String(s === 'listening'));
+    bSpeak.setAttribute('aria-pressed', String(s === 'speaking'));
+  }
+
+  document.getElementById('b-replay').onclick = function () { api.replay(); sync(); };
+  bListen.onclick = function () { api.setState('listening'); sync(); };
+  bSpeak.onclick = function () { api.setState('speaking'); sync(); };
+  bMic.onclick = function () {
+    api.enableMic().then(function (ok) {
+      bMic.setAttribute('aria-pressed', String(ok));
+      bMic.textContent = ok ? 'MIC ON' : 'MIC BLOCKED';
+    });
+  };
+})();
+</script>
+</body>
+</html>
