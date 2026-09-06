@@ -45,19 +45,9 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   renderer.autoClear = false;
 
   const bloom = createBloom(THREE, renderer);
-  bloom.setStrength(0.78, 0.52);
 
   const maxDpr = quality === 'high' ? 2 : 1.5;
-  // Budget the framebuffer, not just the pixel ratio. A 5K display at 2x
-  // would otherwise ask the bloom pass to chew through 14M pixels a frame.
-  const PIXEL_BUDGET = quality === 'high' ? 2_600_000 : 1_300_000;
   let dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
-
-  function fitDpr(w, h) {
-    const want = Math.min(window.devicePixelRatio || 1, maxDpr);
-    const over = (w * h * want * want) / PIXEL_BUDGET;
-    return over > 1 ? Math.max(1, want / Math.sqrt(over)) : want;
-  }
 
   const sprite = makeSprite(THREE);
 
@@ -88,7 +78,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uLevel: { value: 0 },
     uSpeaking: { value: 0 },
     uOpacity: { value: 1 },
-    uScale: { value: 1000 },
+    uPixelRatio: { value: dpr },
     uEmitter: { value: new THREE.Vector3().fromArray(H.emitter) },
     uSprite: { value: sprite },
   };
@@ -118,7 +108,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uTime: { value: 0 },
     uLevel: { value: 0 },
     uOpacity: { value: 0 },
-    uScale: { value: 1000 },
+    uPixelRatio: { value: dpr },
     uSprite: { value: sprite },
   };
 
@@ -256,18 +246,14 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement.clientWidth || 1;
     const h = canvas.clientHeight || canvas.parentElement.clientHeight || 1;
-    dpr = fitDpr(w, h);
+    dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, false);
     bloom.setSize(Math.round(w * dpr), Math.round(h * dpr));
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    // Pixels per world unit at unit depth, straight off the framebuffer.
-    // Resolution-independent: no separate devicePixelRatio term needed.
-    const px = renderer.domElement.height;
-    const scale = (px * 0.5) / Math.tan((camera.fov * Math.PI) / 360);
-    uniforms.uScale.value = scale;
-    haloUniforms.uScale.value = scale;
+    uniforms.uPixelRatio.value = dpr;
+    haloUniforms.uPixelRatio.value = dpr;
   }
 
   const ro = new ResizeObserver(resize);
