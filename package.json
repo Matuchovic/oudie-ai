@@ -9,7 +9,7 @@
     "preview": "node scripts/build-standalone.mjs && echo 'open dist/oudie-humanoid.html'"
   },
   "dependencies": {
-    "next": "15.1.6",
+    "next": "15.1.11",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "three": "0.172.0"
