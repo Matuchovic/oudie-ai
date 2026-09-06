@@ -213,3 +213,27 @@ Service role key se v tomhle projektu nesmí objevit nikdy a nikde.
 
 Bez nastaveného adaptéru panel naskočí a řekne, že přihlašování není
 nastavené. Nepředstírá, že je někdo přihlášený.
+
+## Sledování kamerou
+
+`components/humanoid/tracker.js`. Humanoid otáčí hlavu za pohybem před
+kamerou — mávneš rukou, podívá se tam.
+
+**Bez modelu strojového učení.** Snímek se zmenší na 64×48, spočítá se
+rozdíl jasu proti předchozímu a z toho vážené těžiště pohybu. Tři tisíce
+pixelů na snímek, nic se nestahuje, běží to na čemkoli s kamerou.
+
+Nehledá to ruku, hledá to pohyb — pro „hlava se za tebou otáčí" je to
+správný cíl, protože zabere i naklonění těla.
+
+Soukromí je řešené strukturou, ne slibem: snímek se vykreslí do skryté
+canvasu, zredukuje na dvě čísla a přepíše. Nic se neukládá, nic neodesílá,
+a v tom souboru není cesta, kudy by snímek mohl odejít.
+
+Otáčení je v shaderu kolem kloubu na spodku krku s náběhem `smoothstep`,
+takže se ohne krk a ramena zůstanou. Rotace celé postavy by četla jako
+pohyb kamery, ne jako pohled. Rozsah je ±36° vodorovně a ±17° svisle —
+dál už se busta odtrhne.
+
+Bez povolené kamery zůstane `uLook` na nule a nic se nezmění. `setLook()`
+umožní hlavu řídit odjinud — třeba z detekce hlasu nebo z kurzoru.

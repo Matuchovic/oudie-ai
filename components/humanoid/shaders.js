@@ -15,6 +15,7 @@ uniform float uSpeaking;    // 0..1 blend toward the speaking look
 uniform float uScale;      // px per world unit at unit depth
 uniform float uScan;       // height of the travelling scan line, in model space
 uniform float uFlash;      // 1 -> 0 burst when the assembly completes
+uniform vec2  uLook;       // yaw, pitch in radians — where the head is turned
 uniform vec3  uEmitter;
 
 attribute vec3  aTarget;
@@ -46,6 +47,7 @@ void main() {
   float e = easeOutCubic(t);
 
   vec3 p = aTarget;
+  vec3 nrm = aNrm;
   float breathe = sin(uTime * 0.55);
   p.y *= 1.0 + breathe * 0.0045;
   p.xz *= 1.0 + sin(uTime * 0.55 + 1.1) * 0.0032;
@@ -63,6 +65,27 @@ void main() {
   p.x += w * amp * 0.28 * e;
 
   // Quadratic bezier from the emitter, so particles arc out and around.
+  /* Head turn. Rotating around a pivot at the base of the neck, weighted
+     so the shoulders stay put and the neck bends into it. Rotating the
+     whole figure would read as the camera moving, not as it looking. */
+  float hw = smoothstep(-0.26, 0.18, aTarget.y);
+  if (hw > 0.002) {
+    vec3 pivot = vec3(0.0, -0.22, 0.0);
+    vec3 q = p - pivot;
+    float ya = uLook.x * hw;
+    float pa = uLook.y * hw;
+    float cy = cos(ya), sy = sin(ya);
+    q = vec3(q.x * cy + q.z * sy, q.y, -q.x * sy + q.z * cy);
+    float cp = cos(pa), sp = sin(pa);
+    q = vec3(q.x, q.y * cp - q.z * sp, q.y * sp + q.z * cp);
+    p = q + pivot;
+
+    // The normal has to travel with it or the rim lights the wrong edge.
+    vec3 n0 = aNrm;
+    n0 = vec3(n0.x * cy + n0.z * sy, n0.y, -n0.x * sy + n0.z * cy);
+    nrm = vec3(n0.x, n0.y * cp - n0.z * sp, n0.y * sp + n0.z * cp);
+  }
+
   vec3 a = mix(uEmitter, aCtrl, e);
   vec3 b = mix(aCtrl, p, e);
   vec3 pos = mix(a, b, e);
@@ -71,7 +94,7 @@ void main() {
 
   // Fresnel on the surface normal. This is the entire silhouette glow —
   // points whose normal is perpendicular to the view blow out to white.
-  vec3 n = normalize(normalMatrix * aNrm);
+  vec3 n = normalize(normalMatrix * nrm);
   vec3 vd = normalize(-mv.xyz);
   float nd = dot(n, vd);
   vRim = pow(1.0 - abs(nd), 2.2);

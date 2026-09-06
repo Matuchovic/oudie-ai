@@ -32,6 +32,8 @@ const bundle = [
   strip('components/humanoid/geometry.js'),
   '/* --- shaders.js --- */',
   strip('components/humanoid/shaders.js'),
+  '/* --- tracker.js --- */',
+  strip('components/humanoid/tracker.js'),
   '/* --- bloom.js --- */',
   strip('components/humanoid/bloom.js'),
   '/* --- runtime.js --- */',

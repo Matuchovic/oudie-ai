@@ -9,6 +9,7 @@
 
 import { buildHumanoid, buildHalo } from './geometry.js';
 import { createBloom } from './bloom.js';
+import { createTracker } from './tracker.js';
 import {
   HUMANOID_VERT,
   HUMANOID_FRAG,
@@ -101,6 +102,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uOpacity: { value: 1 },
     uScale: { value: 1000 },
     uScan: { value: -99 },
+    uLook: { value: new THREE.Vector2(0, 0) },
     uFlash: { value: 0 },
     uEmitter: { value: new THREE.Vector3().fromArray(H.emitter) },
     uSprite: { value: sprite },
@@ -271,6 +273,12 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   let fpsAt = performance.now();
   let drawCalls = 0;
 
+  // Camera tracking is opt-in and entirely optional; everything below works
+  // untouched when it is never started or gets refused.
+  const tracker = createTracker();
+  const MAX_YAW = 0.62;    // ~36 degrees. Further and the bust reads as detached.
+  const MAX_PITCH = 0.30;
+
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement.clientWidth || 1;
     const h = canvas.clientHeight || canvas.parentElement.clientHeight || 1;
@@ -319,6 +327,14 @@ export function createHumanoid(THREE, canvas, opts = {}) {
 
     // Burst on completion, then decay.
     uniforms.uFlash.value *= 0.90;
+
+    // Where the head is looking. Without the camera this stays at zero and
+    // the idle breathing is the only motion.
+    const tv = tracker.value;
+    uniforms.uLook.value.set(
+      tv.active ? tv.x * MAX_YAW : 0,
+      tv.active ? tv.y * MAX_PITCH : 0
+    );
 
     const wantSpeaking = state === 'speaking' ? 1 : 0;
     uniforms.uSpeaking.value +=
@@ -398,6 +414,12 @@ export function createHumanoid(THREE, canvas, opts = {}) {
       });
     },
     getState: () => state,
+    /* Returns false when the camera is unavailable or refused. */
+    startTracking: () => tracker.start(),
+    stopTracking: () => tracker.stop(),
+    isTracking: () => tracker.isRunning,
+    /* For tests and for driving the head from something other than a camera. */
+    setLook: (yaw, pitch) => uniforms.uLook.value.set(yaw, pitch),
     setSafeMode(on) {
       safeMode = on;
       renderer.setClearColor(0x05070c, on ? 1 : 0);
@@ -432,6 +454,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
       canvas.removeEventListener('touchstart', down);
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
+      tracker.stop();
       bloom.dispose();
       geo.dispose();
       haloGeo.dispose();

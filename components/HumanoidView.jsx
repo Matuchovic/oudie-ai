@@ -22,6 +22,7 @@ export default function HumanoidView({ onReady }) {
   const [diag, setDiag] = useState(null);
   const [view, setView] = useState('team');
   const [lang, setLang] = useState('cs');
+  const [track, setTrack] = useState(false);
 
   useEffect(() => {
     const api = createHumanoid(THREE, canvasRef.current, {
@@ -104,6 +105,15 @@ export default function HumanoidView({ onReady }) {
           onClick={() => apiRef.current?.setState('speaking')}
         >
           Speaking
+        </button>
+        <button
+          aria-pressed={track}
+          onClick={async () => {
+            if (apiRef.current?.isTracking()) { apiRef.current.stopTracking(); setTrack(false); }
+            else setTrack(await apiRef.current?.startTracking());
+          }}
+        >
+          {track ? (t?.trackOn ?? 'Sleduje') : (t?.track ?? 'Sledovat')}
         </button>
         <button
           aria-pressed={mic === true}

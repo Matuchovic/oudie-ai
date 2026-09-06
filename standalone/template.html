@@ -140,6 +140,7 @@
   <div id="bar">
     <button id="b-view">TÝM</button>
     <button id="b-lang">EN</button>
+    <button id="b-eye">SLEDOVAT</button>
     <button id="b-replay">REPLAY</button>
     <button id="b-listen" aria-pressed="true">LISTENING</button>
     <button id="b-speak" aria-pressed="false">SPEAKING</button>
@@ -171,12 +172,16 @@
   document.getElementById('b-replay').onclick = function () { api.replay(); sync(); };
   bListen.onclick = function () { api.setState('listening'); sync(); };
   bSpeak.onclick = function () { api.setState('speaking'); sync(); };
+  window.__api = api;
+
   var i18n = createI18n('cs');
 
   // Gate first. With no adapter configured this shows the panel and says so
   // rather than pretending anyone is signed in.
+  // The standalone file is a design preview with no backend to sign in to,
+  // so the gate only appears on request. The app itself always gates.
   var login = createLogin({ i18n: i18n, logoSrc: 'logo.png', onSignedIn: function () {} });
-  login.gate();
+  if (new URLSearchParams(location.search).has('login')) login.gate();
   window.__login = login;
 
   var sky = createConstellation(document.getElementById('sky'), {

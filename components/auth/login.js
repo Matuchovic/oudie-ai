@@ -135,6 +135,9 @@ export function createLogin(opts = {}) {
       <button class="au-btn au-ghost" type="button" data-google>${T.google}</button>
       <p class="au-foot">${T.foot}</p>
     </div>`;
+  // Hidden until something asks for it. Created visible, it would flash over
+  // the app on every load before gate() had a chance to resolve the session.
+  root.hidden = true;
   document.body.appendChild(root);
 
   const email = root.querySelector('#au-email');
