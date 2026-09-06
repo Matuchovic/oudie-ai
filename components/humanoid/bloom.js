@@ -70,14 +70,40 @@ void main() {
 }
 `;
 
-export function createBloom(THREE, renderer) {
-  // Half-float keeps the additive core from clipping before the tonemap.
-  // Falls back on hardware that will not filter it.
-  const caps = renderer.capabilities;
-  const HDR =
-    caps.isWebGL2 || renderer.extensions.get('OES_texture_half_float_linear')
-      ? THREE.HalfFloatType
-      : THREE.UnsignedByteType;
+export function createBloom(THREE, renderer, opts = {}) {
+  // Half-float keeps the additive core from clipping before the tonemap,
+  // but asking for a capability is not the same as being able to render to
+  // it. Safari in particular will hand back a texture and then quietly
+  // produce an incomplete framebuffer. So actually try it.
+  const gl = renderer.getContext();
+  renderer.extensions.get('EXT_color_buffer_half_float');
+  renderer.extensions.get('EXT_color_buffer_float');
+
+  // Two separate capabilities, and both are required. Rendering TO a
+  // half-float target is not the same as being able to sample it with
+  // LINEAR filtering — and every pass here samples with LINEAR. Safari
+  // reports a complete framebuffer and then returns black. Checking only
+  // completeness is what made the figure invisible there.
+  const canFilter = !!renderer.extensions.get('OES_texture_half_float_linear');
+
+  let HDR = THREE.UnsignedByteType;
+  let hdrOk = false;
+  if (canFilter && !opts.forceLDR) {
+    try {
+      const probe = new THREE.WebGLRenderTarget(4, 4, {
+        type: THREE.HalfFloatType,
+        depthBuffer: false,
+        stencilBuffer: false,
+      });
+      renderer.setRenderTarget(probe);
+      hdrOk = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+      renderer.setRenderTarget(null);
+      probe.dispose();
+    } catch (err) {
+      hdrOk = false;
+    }
+  }
+  if (hdrOk) HDR = THREE.HalfFloatType;
 
   const rt = (w, h) =>
     new THREE.WebGLRenderTarget(Math.max(1, w), Math.max(1, h), {
@@ -139,6 +165,8 @@ export function createBloom(THREE, renderer) {
   }
 
   return {
+    hdr: hdrOk,
+
     setSize(w, h) {
       scene.setSize(w, h);
       a1.setSize(w >> 1, h >> 1);

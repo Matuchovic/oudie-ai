@@ -12,7 +12,7 @@ uniform float uTime;
 uniform float uProgress;    // 0..1 assembly
 uniform float uLevel;       // audio envelope 0..1
 uniform float uSpeaking;    // 0..1 blend toward the speaking look
-uniform float uPixelRatio;
+uniform float uScale;      // px per world unit at unit depth
 uniform vec3  uEmitter;
 
 attribute vec3  aTarget;
@@ -73,14 +73,16 @@ void main() {
   vSeed = aSeed;
   vFade = aFade;
 
-  float base = aKind > 2.5 ? 1.25 : 2.15;
+  // World units, NOT pixels. uScale does the conversion. Getting this
+  // wrong by two orders of magnitude turns 50k dots into one white blob.
+  float base = aKind > 2.5 ? 0.0042 : 0.0069;
   float size = base
              * (1.0 + vTravel * 2.4)
              * (1.0 + vRim * 1.5)
              * (0.7 + aSeed * 0.6);
   size *= 1.0 + aFace * (0.35 + uLevel * 1.1);
 
-  gl_PointSize = size * uPixelRatio * (320.0 / max(0.1, -mv.z));
+  gl_PointSize = max(1.0, size * uScale / max(0.1, -mv.z));
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -131,7 +133,7 @@ void main() {
 export const HALO_VERT = /* glsl */ `
 uniform float uTime;
 uniform float uLevel;
-uniform float uPixelRatio;
+uniform float uScale;
 
 attribute float aRing;
 attribute float aSeed;
@@ -150,7 +152,7 @@ void main() {
   vAlpha = (1.0 - phase) * (0.30 + uLevel * 0.75) * smoothstep(0.0, 0.16, phase);
 
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_PointSize = (1.05 + aSeed * 0.7) * uPixelRatio * (300.0 / max(0.1, -mv.z));
+  gl_PointSize = max(1.0, (0.0026 + aSeed * 0.0018) * uScale / max(0.1, -mv.z));
   gl_Position = projectionMatrix * mv;
 }
 `;

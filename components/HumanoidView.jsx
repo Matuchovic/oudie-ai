@@ -13,6 +13,8 @@ export default function HumanoidView({ onReady }) {
   const [label, setLabel] = useState('ASSEMBLING… 0%');
   const [state, setState] = useState('assembling');
   const [mic, setMic] = useState(null);
+  const [diag, setDiag] = useState(null);
+  const [safe, setSafe] = useState(false);
 
   useEffect(() => {
     const api = createHumanoid(THREE, canvasRef.current, {
@@ -23,7 +25,12 @@ export default function HumanoidView({ onReady }) {
     });
     apiRef.current = api;
     onReady?.(api);
-    return () => api.dispose();
+    // Poll rather than push: cheap, and it keeps the render loop allocation-free.
+    const t = setInterval(() => setDiag(api.diagnostics()), 500);
+    return () => {
+      clearInterval(t);
+      api.dispose();
+    };
   }, [onReady]);
 
   const busy = state === 'assembling';
@@ -32,6 +39,19 @@ export default function HumanoidView({ onReady }) {
     <div className="stage">
       <canvas ref={canvasRef} />
       <div className="status">{label}</div>
+
+      {diag && (
+        <div className="diag">
+          <div>WebGL {diag.webgl} · HDR bloom {diag.hdrBloom ? 'yes' : 'no'}</div>
+          <div>canvas {diag.canvas} @ {diag.dpr}x</div>
+          <div>uScale {diag.uScale} · point {diag.pointPx}px</div>
+          <div>{diag.points.toLocaleString()} points · {diag.drawCalls} draws</div>
+          <div>{diag.fps} fps{diag.safeMode ? ' · safe mode' : ''}</div>
+          {diag.shaderErrors.length > 0 && (
+            <div className="diag-err">shader: {diag.shaderErrors[0]}</div>
+          )}
+        </div>
+      )}
 
       <div className="bar" role="group" aria-label="Humanoid controls">
         <button onClick={() => apiRef.current?.replay()}>Replay</button>
@@ -48,6 +68,16 @@ export default function HumanoidView({ onReady }) {
           onClick={() => apiRef.current?.setState('speaking')}
         >
           Speaking
+        </button>
+        <button
+          aria-pressed={safe}
+          onClick={() => {
+            const next = !safe;
+            setSafe(next);
+            apiRef.current?.setSafeMode(next);
+          }}
+        >
+          No bloom
         </button>
         <button
           aria-pressed={mic === true}

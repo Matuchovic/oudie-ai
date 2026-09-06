@@ -76,3 +76,22 @@ html, body {
   border-color: rgba(255, 176, 46, 0.5);
   background: rgba(255, 176, 46, 0.09);
 }
+
+/* Runtime readout. Deliberately plain: this is for reading numbers off a
+   screenshot, not for looking good. */
+.diag {
+  position: fixed;
+  top: 12px;
+  left: 14px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgba(160, 200, 225, 0.75);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.diag-err {
+  margin-top: 6px;
+  max-width: 46ch;
+  color: #ff8a6a;
+  white-space: pre-wrap;
+}

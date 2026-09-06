@@ -73,6 +73,13 @@
     border-color: rgba(255,176,46,.5);
     background: rgba(255,176,46,.09);
   }
+  #diag {
+    position: fixed; top: 12px; left: 14px;
+    font-size: 11px; line-height: 1.6;
+    color: rgba(160,200,225,.75);
+    pointer-events: none; font-variant-numeric: tabular-nums;
+    white-space: pre-wrap; max-width: 46ch;
+  }
   #hint {
     position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(max(20px, env(safe-area-inset-bottom)) + 52px);
@@ -85,11 +92,13 @@
 <body>
   <div id="stage"><canvas id="c"></canvas></div>
   <div id="status">ASSEMBLING… 0%</div>
+  <div id="diag"></div>
   <div id="hint">drag to orbit</div>
   <div id="bar">
     <button id="b-replay">REPLAY</button>
     <button id="b-listen" aria-pressed="true">LISTENING</button>
     <button id="b-speak" aria-pressed="false">SPEAKING</button>
+    <button id="b-safe">NO BLOOM</button>
     <button id="b-mic">MIC</button>
   </div>
 
@@ -105,7 +114,8 @@
   var bMic = document.getElementById('b-mic');
 
   var api = createHumanoid(THREE, canvas, {
-    onStatus: function (s) { status.textContent = s.label; }
+    onStatus: function (s) { status.textContent = s.label; },
+    forceLDR: new URLSearchParams(location.search).has('ldr')
   });
 
   function sync() {
@@ -117,6 +127,26 @@
   document.getElementById('b-replay').onclick = function () { api.replay(); sync(); };
   bListen.onclick = function () { api.setState('listening'); sync(); };
   bSpeak.onclick = function () { api.setState('speaking'); sync(); };
+  var bSafe = document.getElementById('b-safe');
+  var safe = false;
+  bSafe.onclick = function () {
+    safe = !safe;
+    api.setSafeMode(safe);
+    bSafe.setAttribute('aria-pressed', String(safe));
+  };
+
+  var diagEl = document.getElementById('diag');
+  setInterval(function () {
+    var d = api.diagnostics();
+    diagEl.textContent =
+      'WebGL ' + d.webgl + ' · HDR bloom ' + (d.hdrBloom ? 'yes' : 'no') + '\n' +
+      'canvas ' + d.canvas + ' @ ' + d.dpr + 'x\n' +
+      'uScale ' + d.uScale + ' · point ' + d.pointPx + 'px\n' +
+      d.points + ' points · ' + d.drawCalls + ' draws\n' +
+      d.fps + ' fps' + (d.safeMode ? ' · safe mode' : '') +
+      (d.shaderErrors.length ? '\n\nSHADER: ' + d.shaderErrors[0] : '');
+  }, 500);
+
   bMic.onclick = function () {
     api.enableMic().then(function (ok) {
       bMic.setAttribute('aria-pressed', String(ok));

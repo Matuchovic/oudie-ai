@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "lint:shaders": "node scripts/lint-shaders.mjs",
+    "build": "node scripts/lint-shaders.mjs && next build",
     "start": "next start",
     "preview": "node scripts/build-standalone.mjs && echo 'open dist/oudie-humanoid.html'"
   },
   "dependencies": {
-    "next": "15.1.6",
+    "next": "15.1.9",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "three": "0.172.0"

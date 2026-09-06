@@ -2,6 +2,7 @@
    HTML file. The preview must never drift from the app, so it is built
    from the same sources rather than maintained separately. */
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +16,12 @@ function strip(rel) {
     .replace(/^export\s+(const|function|class|let|var)\s/gm, '$1 ')
     .replace(/^export\s*\{[\s\S]*?\};?\s*$/gm, '');
 }
+
+// GLSL lives in template literals, so node --check cannot see it. Lint first
+// or a renamed uniform ships as a blank screen.
+execFileSync(process.execPath, [resolve(root, 'scripts/lint-shaders.mjs')], {
+  stdio: 'inherit',
+});
 
 const bundle = [
   '/* --- geometry.js --- */',
@@ -38,11 +45,18 @@ writeFileSync(resolve(root, 'dist/oudie-humanoid.html'), html);
 const kb = (Buffer.byteLength(html) / 1024).toFixed(1);
 console.log(`dist/oudie-humanoid.html  ${kb} kB`);
 
-/* Cheap guard: nothing that would break in a plain <script> tag. */
-for (const bad of ['import ', 'export ']) {
-  if (bundle.includes(bad)) {
-    console.error(`FAIL: bundle still contains "${bad.trim()}"`);
-    process.exit(1);
-  }
-}
-console.log('bundle clean — no module syntax left');
+/* Test build: same bundle, but three comes from a local ES module instead
+   of the CDN. This is what the headless Chromium harness loads, and it
+   matches how the Next.js app imports three. */
+const tpl = readFileSync(resolve(root, 'standalone/template.html'), 'utf8');
+const initJs = tpl.split('/*__BUNDLE__*/')[1].split('</script>')[0];
+const head = tpl.split('<script src="https://cdnjs.cloudflare.com')[0];
+writeFileSync(
+  resolve(root, 'dist/test.html'),
+  head +
+    '<script type="module">\n' +
+    "import * as THREE from './three.module.js';\nwindow.THREE = THREE;\n" +
+    bundle + '\n' + initJs +
+    '\n</script>\n</body>\n</html>\n'
+);
+console.log('dist/test.html (headless harness target)');

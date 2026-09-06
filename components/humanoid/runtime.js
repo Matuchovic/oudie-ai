@@ -43,11 +43,32 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   });
   renderer.setClearColor(0x000000, 0);
   renderer.autoClear = false;
+  renderer.info.autoReset = false;
 
-  const bloom = createBloom(THREE, renderer);
+  const bloom = createBloom(THREE, renderer, { forceLDR: opts.forceLDR });
+  bloom.setStrength(0.78, 0.52);
+
+  // A failed GLSL compile makes three skip the object silently — you get a
+  // blank canvas and no clue why. Capture it instead.
+  const shaderErrors = [];
+  renderer.debug.checkShaderErrors = true;
+  renderer.debug.onShaderError = (gl, prog, vs, fs) => {
+    const grab = (sh) => (gl.getShaderInfoLog(sh) || '').trim();
+    shaderErrors.push([grab(vs), grab(fs), (gl.getProgramInfoLog(prog) || '').trim()]
+      .filter(Boolean).join(' | ').slice(0, 400));
+  };
 
   const maxDpr = quality === 'high' ? 2 : 1.5;
+  // Budget the framebuffer, not just the pixel ratio. A 5K display at 2x
+  // would otherwise ask the bloom pass to chew through 14M pixels a frame.
+  const PIXEL_BUDGET = quality === 'high' ? 2_600_000 : 1_300_000;
   let dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+
+  function fitDpr(w, h) {
+    const want = Math.min(window.devicePixelRatio || 1, maxDpr);
+    const over = (w * h * want * want) / PIXEL_BUDGET;
+    return over > 1 ? Math.max(1, want / Math.sqrt(over)) : want;
+  }
 
   const sprite = makeSprite(THREE);
 
@@ -78,7 +99,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uLevel: { value: 0 },
     uSpeaking: { value: 0 },
     uOpacity: { value: 1 },
-    uPixelRatio: { value: dpr },
+    uScale: { value: 1000 },
     uEmitter: { value: new THREE.Vector3().fromArray(H.emitter) },
     uSprite: { value: sprite },
   };
@@ -108,7 +129,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uTime: { value: 0 },
     uLevel: { value: 0 },
     uOpacity: { value: 0 },
-    uPixelRatio: { value: dpr },
+    uScale: { value: 1000 },
     uSprite: { value: sprite },
   };
 
@@ -242,18 +263,27 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   let raf = 0;
   let running = true;
   let lastPct = -1;
+  let safeMode = opts.safeMode ?? false;
+  let frames = 0;
+  let fps = 0;
+  let fpsAt = performance.now();
+  let drawCalls = 0;
 
   function resize() {
     const w = canvas.clientWidth || canvas.parentElement.clientWidth || 1;
     const h = canvas.clientHeight || canvas.parentElement.clientHeight || 1;
-    dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    dpr = fitDpr(w, h);
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, false);
     bloom.setSize(Math.round(w * dpr), Math.round(h * dpr));
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    uniforms.uPixelRatio.value = dpr;
-    haloUniforms.uPixelRatio.value = dpr;
+    // Pixels per world unit at unit depth, straight off the framebuffer.
+    // Resolution-independent: no separate devicePixelRatio term needed.
+    const px = renderer.domElement.height;
+    const scale = (px * 0.5) / Math.tan((camera.fov * Math.PI) / 360);
+    uniforms.uScale.value = scale;
+    haloUniforms.uScale.value = scale;
   }
 
   const ro = new ResizeObserver(resize);
@@ -314,7 +344,23 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     if (!dragging) cam.dragAz *= 0.995;
 
     placeCamera();
-    bloom.render(scene, camera);
+    if (safeMode) {
+      renderer.setRenderTarget(null);
+      renderer.clear();
+      renderer.render(scene, camera);
+    } else {
+      bloom.render(scene, camera);
+    }
+
+    drawCalls = renderer.info.render.calls;
+    renderer.info.reset();
+
+    frames++;
+    if (now - fpsAt > 500) {
+      fps = Math.round((frames * 1000) / (now - fpsAt));
+      frames = 0;
+      fpsAt = now;
+    }
   }
 
   placeCamera();
@@ -339,6 +385,27 @@ export function createHumanoid(THREE, canvas, opts = {}) {
       });
     },
     getState: () => state,
+    setSafeMode(on) {
+      safeMode = on;
+      renderer.setClearColor(0x05070c, on ? 1 : 0);
+    },
+    diagnostics() {
+      const el = renderer.domElement;
+      const z = cam.radius;
+      return {
+        webgl: renderer.capabilities.isWebGL2 ? 2 : 1,
+        hdrBloom: bloom.hdr,
+        canvas: `${el.width}x${el.height}`,
+        dpr: +dpr.toFixed(2),
+        uScale: Math.round(uniforms.uScale.value),
+        pointPx: +(0.0069 * uniforms.uScale.value / z).toFixed(2),
+        points: H.count,
+        fps,
+        drawCalls,
+        safeMode,
+        shaderErrors,
+      };
+    },
     setBloom: (tight, wide) => bloom.setStrength(tight, wide),
     enableMic,
     dispose() {
