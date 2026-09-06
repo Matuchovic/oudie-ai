@@ -216,24 +216,46 @@ nastavené. Nepředstírá, že je někdo přihlášený.
 
 ## Sledování kamerou
 
-`components/humanoid/tracker.js`. Humanoid otáčí hlavu za pohybem před
-kamerou — mávneš rukou, podívá se tam.
+`components/humanoid/tracker.js`. Humanoid otáčí hlavu za tím, **kde jsi** —
+ne za tím, kde se něco pohnulo. Ten rozdíl je celý vtip: detektor pohybu tě
+ztratí ve chvíli, kdy se zastavíš, a hlava se vrátí do středu. Odtud to
+cuknutí tam a zpět.
 
-**Bez modelu strojového učení.** Snímek se zmenší na 64×48, spočítá se
-rozdíl jasu proti předchozímu a z toho vážené těžiště pohybu. Tři tisíce
-pixelů na snímek, nic se nestahuje, běží to na čemkoli s kamerou.
+Tři části, bez modelu strojového učení a bez stahování:
 
-Nehledá to ruku, hledá to pohyb — pro „hlava se za tebou otáčí" je to
-správný cíl, protože zabere i naklonění těla.
+**Model pozadí.** Pomalu se adaptující klouzavý průměr. Odečtením vznikne
+popředí — člověk, který jen stojí, tam pořád je, zatímco rozdíl snímků
+nevidí nic.
 
-Soukromí je řešené strukturou, ne slibem: snímek se vykreslí do skryté
-canvasu, zredukuje na dvě čísla a přepíše. Nic se neukládá, nic neodesílá,
-a v tom souboru není cesta, kudy by snímek mohl odejít.
+**Mean-shift.** Z poslední známé pozice se vezme těžiště v okně a okno se
+na něj přesune, třikrát. Tím se to zamkne na jeden cíl místo aby zprůměrovalo
+ruku a procházející stín do prázdna mezi nimi. Váhy jsou Epanechnikovovo
+jádro, takže odhad nejde přetáhnout něčím, co jen zavadilo o roh okna.
 
-Otáčení je v shaderu kolem kloubu na spodku krku s náběhem `smoothstep`,
-takže se ohne krk a ramena zůstanou. Rotace celé postavy by četla jako
-pohyb kamery, ne jako pohled. Rozsah je ±36° vodorovně a ±17° svisle —
-dál už se busta odtrhne.
+**Držení.** Bez důvěryhodného pozorování se cíl nepohne vůbec. Nikdy nedrží
+ke středu, protože „nevidím tě" není totéž co „jsi uprostřed".
 
-Bez povolené kamery zůstane `uLook` na nule a nic se nezmění. `setLook()`
-umožní hlavu řídit odjinud — třeba z detekce hlasu nebo z kurzoru.
+Testy jsou v `scripts/tracker.test.mjs` a běží na syntetických snímcích, bez
+kamery: `node scripts/tracker.test.mjs`. Ten podstatný ověřuje přesně tuhle
+regresi — po zastavení se pozice posune o 0,003.
+
+Otáčení je v shaderu kolem kloubu na spodku krku s náběhem, takže se ohne
+krk a ramena zůstanou. Rozsah ±36° vodorovně, ±17° svisle.
+
+Kamera i mikrofon se zapínají **automaticky při přepnutí na tvář** a vypínají
+při odchodu z ní. Žádné další přepínače. Odmítnutí nic nerozbije.
+
+## Mobilní optimalizace
+
+Zařízení se rozpozná samo: hrubý ukazatel plus malá obrazovka, nebo
+`deviceMemory` do 4 GB. Telefon pak dostane **30 tisíc bodů místo 57 tisíc**.
+
+Render se **úplně zastaví**, když je záložka skrytá nebo když konstelace
+překrývá plátno. To ušetří na baterii víc než všechna ostatní opatření
+dohromady — dřív se humanoid počítal i schovaný za diagramem.
+
+Sledování jede na 24 Hz, ne na každý snímek, a kamera se ptá na 240×180
+místo aby si vyžádala 720p a zahodila je.
+
+Rozpočet framebufferu je 2,6 milionu pixelů; na 5K displeji se DPR sníží,
+místo aby bloom žvýkal čtrnáct milionů pixelů na snímek.

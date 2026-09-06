@@ -140,11 +140,9 @@
   <div id="bar">
     <button id="b-view">TÝM</button>
     <button id="b-lang">EN</button>
-    <button id="b-eye">SLEDOVAT</button>
     <button id="b-replay">REPLAY</button>
     <button id="b-listen" aria-pressed="true">LISTENING</button>
     <button id="b-speak" aria-pressed="false">SPEAKING</button>
-    <button id="b-mic">MIC</button>
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -156,7 +154,6 @@
   var status = document.getElementById('status');
   var bListen = document.getElementById('b-listen');
   var bSpeak = document.getElementById('b-speak');
-  var bMic = document.getElementById('b-mic');
 
   var api = createHumanoid(THREE, canvas, {
     onStatus: function (s) { status.textContent = s.label; },
@@ -180,8 +177,8 @@
   // rather than pretending anyone is signed in.
   // The standalone file is a design preview with no backend to sign in to,
   // so the gate only appears on request. The app itself always gates.
-  var login = createLogin({ i18n: i18n, logoSrc: 'logo.png', onSignedIn: function () {} });
-  if (new URLSearchParams(location.search).has('login')) login.gate();
+  var login = createLogin({ i18n: i18n, logoSrc: 'logo.png', previewSkip: true, onSignedIn: function () {} });
+  login.gate();
   window.__login = login;
 
   var sky = createConstellation(document.getElementById('sky'), {
@@ -210,7 +207,17 @@
     flash.classList.add('go');
     setTimeout(function () {         // swap at the peak of the burst
       view = view === 'team' ? 'face' : 'team';
-      if (view === 'face') api.replay();
+      if (view === 'face') {
+        api.setPaused(false);
+        api.replay();
+        // Requested inside the click handler so the gesture still counts.
+        // Refusal is fine: the figure just stops reacting.
+        api.startTracking();
+        api.enableMic();
+      } else {
+        api.stopTracking();
+        api.setPaused(true);
+      }
       applyView();
     }, 200);
     setTimeout(function () { swapping = false; }, 640);
@@ -235,12 +242,6 @@
       (d.shaderErrors.length ? '\n\nSHADER: ' + d.shaderErrors[0] : '');
   }, 500);
 
-  bMic.onclick = function () {
-    api.enableMic().then(function (ok) {
-      bMic.setAttribute('aria-pressed', String(ok));
-      bMic.textContent = ok ? 'MIC ON' : 'MIC BLOCKED';
-    });
-  };
 })();
 </script>
 </body>

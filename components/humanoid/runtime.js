@@ -31,7 +31,14 @@ function clamp01(x) {
 
 export function createHumanoid(THREE, canvas, opts = {}) {
   const onStatus = opts.onStatus ?? (() => {});
-  const quality = opts.quality ?? 'high';
+  // A phone gets a lighter build without anyone having to ask. Coarse
+  // pointer plus a small screen is a reliable enough signal, and the
+  // deviceMemory hint catches cheap tablets that lie about the rest.
+  const coarse = typeof matchMedia === 'function' &&
+    matchMedia('(pointer: coarse)').matches;
+  const small = Math.min(window.innerWidth, window.innerHeight) < 760;
+  const weak = (navigator.deviceMemory ?? 8) <= 4;
+  const quality = opts.quality ?? ((coarse && small) || weak ? 'low' : 'high');
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
@@ -77,7 +84,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   const H = buildHumanoid(
     quality === 'high'
       ? {}
-      : { bands: 62, density: 100, strands: 30, loose: 1800 }
+      : { bands: 74, density: 118, strands: 30, loose: 1500 }
   );
 
   const geo = new THREE.BufferGeometry();
@@ -272,6 +279,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   let fps = 0;
   let fpsAt = performance.now();
   let drawCalls = 0;
+  let paused = false;
 
   // Camera tracking is opt-in and entirely optional; everything below works
   // untouched when it is never started or gets refused.
@@ -303,6 +311,10 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   function frame() {
     if (!running) return;
     raf = requestAnimationFrame(frame);
+    // Hidden tab, or the constellation is covering the canvas: there is
+    // nothing to draw for. Skipping the whole pipeline here is worth more
+    // on battery than every other optimisation combined.
+    if (paused || document.hidden) return;
 
     const now = performance.now();
     const t = (now - start) / 1000;
@@ -414,6 +426,11 @@ export function createHumanoid(THREE, canvas, opts = {}) {
       });
     },
     getState: () => state,
+    /* Called when the humanoid is covered up, so it stops rendering. */
+    setPaused(v) {
+      paused = !!v;
+      if (paused) tracker.stop();
+    },
     /* Returns false when the camera is unavailable or refused. */
     startTracking: () => tracker.start(),
     stopTracking: () => tracker.stop(),

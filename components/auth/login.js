@@ -134,6 +134,8 @@ export function createLogin(opts = {}) {
       <div class="au-sep">${T.or}</div>
       <button class="au-btn au-ghost" type="button" data-google>${T.google}</button>
       <p class="au-foot">${T.foot}</p>
+      ${opts.previewSkip ? `<button class="au-btn au-ghost" type="button" data-skip
+        style="min-height:40px;font-size:13px;opacity:.7">${cs ? 'Prohlédnout bez přihlášení' : 'Look around without signing in'}</button>` : ''}
     </div>`;
   // Hidden until something asks for it. Created visible, it would flash over
   // the app on every load before gate() had a chance to resolve the session.
@@ -176,6 +178,7 @@ export function createLogin(opts = {}) {
   goBtn.addEventListener('click', submit);
   pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
   email.addEventListener('keydown', (e) => { if (e.key === 'Enter') pass.focus(); });
+  root.querySelector('[data-skip]')?.addEventListener('click', () => hide());
   root.querySelector('[data-google]').addEventListener('click', async () => {
     try { await auth.signInWithGoogle(); } catch (err) { fail(err); }
   });
