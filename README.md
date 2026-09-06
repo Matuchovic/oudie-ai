@@ -80,3 +80,28 @@ Autor reference má v README výslovně napsáno, že kód je MIT, ale jméno
 „Apex" a branding pod licenci nespadají. Než to nasadíš veřejně, vyber
 si vlastní název — v kódu není nikde natvrdo, je jen v `metadata.title`
 a v názvu balíčku.
+
+## Ladicí páky (ověřené v headless prohlížeči)
+
+| soubor | co |
+|---|---|
+| `geometry.js` → `FACE` | pozice, šířka a výška tepelné masky obličeje |
+| `geometry.js` → `faceMask()` mocnina | jak ostře oranžová opadá; vyšší = menší jádro |
+| `geometry.js` → `density` | bodů na pás; víc = souvislejší čára |
+| `shaders.js` → `amp` | amplituda vlnění pásů. Musí být výrazně menší než rozteč pásů, jinak se slijí |
+| `shaders.js` → `float i = (...)` | první člen je jas mezer, `vRim` obrys, `f` obličej |
+| `shaders.js` → `vRim` exponent | nižší = širší měkčí obrys |
+| `runtime.js` → `bloom.setStrength(a, b)` | a = úzká záře, b = široké halo |
+| `bloom.js` → `top` / `bot` | pozadí; reference je téměř černá |
+
+## Testování
+
+```bash
+node scripts/build-standalone.mjs
+xvfb-run -a node_modules/.bin/electron scripts/shoot.cjs
+```
+
+Vyrenderuje timeline ve skutečném Chromiu (WebGL2) do `/tmp/shots`.
+`scripts/preview_render.py` je jen rychlá kontrola siluety — **není to
+test rendereru**, protože shader reimplementuje. Dvakrát se shodl sám se
+sebou a rozešel se s GPU. Vždycky ověřuj `shoot.cjs`.

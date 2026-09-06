@@ -54,6 +54,13 @@ app.whenReady().then(async () => {
     ['05_listening', 2500],
   ];
 
+  const extra = async (name, js) => {
+    await win.webContents.executeJavaScript(js);
+    await sleep(900);
+    const img = await win.webContents.capturePage();
+    fs.writeFileSync(path.join(OUT, `${name}.png`), img.toPNG());
+  };
+
   for (const [name, wait] of marks) {
     if (wait) await sleep(wait);
     const img = await win.webContents.capturePage();
@@ -64,6 +71,8 @@ app.whenReady().then(async () => {
     );
     console.log(`--- ${name} ---\n${d}\n`);
   }
+
+  await extra('06_speaking', "document.getElementById('b-speak').click()");
 
   if (logs.length) console.log('CONSOLE:\n' + logs.join('\n'));
 

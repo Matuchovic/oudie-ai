@@ -46,7 +46,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   renderer.info.autoReset = false;
 
   const bloom = createBloom(THREE, renderer, { forceLDR: opts.forceLDR });
-  bloom.setStrength(0.78, 0.52);
+  bloom.setStrength(0.92, 0.26);
 
   // A failed GLSL compile makes three skip the object silently — you get a
   // blank canvas and no clue why. Capture it instead.

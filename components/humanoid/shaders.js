@@ -30,6 +30,7 @@ varying float vTravel;
 varying float vKind;
 varying float vSeed;
 varying float vFade;
+varying float vFacing;
 
 const float SPREAD = 0.74;  // how far the arrival wavefront is smeared
 const float TRAVEL = 0.26;  // how long one particle takes to fly in
@@ -46,9 +47,9 @@ void main() {
   // the audio envelope — that is the whole voice reactivity.
   float w = sin(p.x * 6.2 + uTime * 1.7 + p.y * 2.4) * 0.6
           + sin(p.x * 12.5 - uTime * 2.4 + aSeed * 6.283) * 0.4;
-  float amp = 0.009
-            + aFace * 0.042 * (0.35 + uLevel * 1.35)
-            + uSpeaking * 0.005;
+  float amp = 0.0028
+            + aFace * 0.040 * (0.35 + uLevel * 1.35)
+            + uSpeaking * 0.003;
   if (aKind > 2.5) amp *= 2.4;
   // loose sparks read as dust, not structure              // loose sparks drift more
   p.y += w * amp * e;
@@ -65,7 +66,11 @@ void main() {
   // points whose normal is perpendicular to the view blow out to white.
   vec3 n = normalize(normalMatrix * aNrm);
   vec3 vd = normalize(-mv.xyz);
-  vRim = pow(1.0 - abs(dot(n, vd)), 2.9);
+  float nd = dot(n, vd);
+  vRim = pow(1.0 - abs(nd), 2.2);
+  // Far side stays visible — the reference is translucent — but recedes,
+  // so the near bands read as distinct lines instead of merging.
+  vFacing = nd > 0.0 ? 1.0 : 0.34;
 
   vTravel = 1.0 - e;
   vFace = aFace;
@@ -99,6 +104,7 @@ varying float vTravel;
 varying float vKind;
 varying float vSeed;
 varying float vFade;
+varying float vFacing;
 
 void main() {
   float a = texture2D(uSprite, gl_PointCoord).a;
@@ -106,17 +112,17 @@ void main() {
 
   const vec3 CYAN   = vec3(0.055, 0.640, 1.000);
   const vec3 ICE    = vec3(0.800, 0.960, 1.000);
-  const vec3 ORANGE = vec3(1.000, 0.330, 0.045);
+  const vec3 ORANGE = vec3(1.000, 0.255, 0.020);
   const vec3 AMBER  = vec3(1.000, 0.700, 0.160);
   const vec3 HOT    = vec3(1.000, 0.960, 0.800);
 
-  float f = min(1.0, vFace * (1.55 + uLevel * 0.75 + uSpeaking * 0.45));
+  float f = min(1.0, vFace * (1.02 + uLevel * 0.42 + uSpeaking * 0.26));
 
   vec3 c = CYAN;
-  c = mix(c, ORANGE, smoothstep(0.14, 0.54, f));
-  c = mix(c, AMBER,  smoothstep(0.48, 0.80, f));
-  c = mix(c, HOT,    smoothstep(0.76, 1.00, f));
-  c = mix(c, ICE, vRim * 0.40);
+  c = mix(c, ORANGE, smoothstep(0.10, 0.44, f));
+  c = mix(c, AMBER,  smoothstep(0.58, 0.86, f));
+  c = mix(c, HOT,    smoothstep(0.90, 1.00, f));
+  c = mix(c, ICE, vRim * 0.30);
 
   // Throat filaments run amber regardless of the face mask.
   if (vKind > 1.5 && vKind < 2.5) c = mix(AMBER, HOT, vSeed * 0.65);
@@ -125,7 +131,7 @@ void main() {
   // band colour as they land.
   c = mix(c, ICE, vTravel * 0.55);
 
-  float i = (0.62 + vRim * 1.55 + f * 2.35) * (0.55 + vTravel * 0.85);
+  float i = (0.40 + vRim * 2.30 + f * 2.05) * (0.55 + vTravel * 0.85);
   gl_FragColor = vec4(c * i, a * uOpacity * vFade);
 }
 `;
@@ -179,10 +185,10 @@ export function makeSprite(THREE, size = 128) {
   const r = size / 2;
   const grad = g.createRadialGradient(r, r, 0, r, r, r);
   grad.addColorStop(0.0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.07, 'rgba(255,255,255,0.95)');
-  grad.addColorStop(0.16, 'rgba(255,255,255,0.42)');
-  grad.addColorStop(0.32, 'rgba(255,255,255,0.10)');
-  grad.addColorStop(0.58, 'rgba(255,255,255,0.02)');
+  grad.addColorStop(0.16, 'rgba(255,255,255,0.92)');
+  grad.addColorStop(0.34, 'rgba(255,255,255,0.34)');
+  grad.addColorStop(0.52, 'rgba(255,255,255,0.06)');
+  grad.addColorStop(0.72, 'rgba(255,255,255,0.01)');
   grad.addColorStop(1.0, 'rgba(255,255,255,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, size, size);

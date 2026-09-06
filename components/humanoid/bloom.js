@@ -47,8 +47,8 @@ uniform float uStrengthB;
 varying vec2 vUv;
 
 void main() {
-  vec3 top = vec3(0.078, 0.102, 0.149);
-  vec3 bot = vec3(0.020, 0.027, 0.047);
+  vec3 top = vec3(0.026, 0.034, 0.052);
+  vec3 bot = vec3(0.005, 0.007, 0.013);
   vec3 bg = mix(bot, top, pow(vUv.y, 1.35));
 
   vec2 d = vUv - 0.5;
@@ -64,7 +64,7 @@ void main() {
   // The rolloff desaturates as it compresses. Push chroma back or the
   // whole figure reads grey rather than electric blue.
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c = mix(vec3(l), c, 1.42);
+  c = mix(vec3(l), c, 1.58);
 
   gl_FragColor = vec4(pow(max(c, 0.0), vec3(0.4545)), 1.0);
 }

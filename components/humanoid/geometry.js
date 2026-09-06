@@ -52,7 +52,7 @@ const Y_CENTER = 0.980; // shifts the model so the head sits at eye level
 
 /* Face heat centre, in model space before centring. Sits on the front
    of the skull, slightly below the vertical middle — brow to chin. */
-const FACE = { y: 1.150, rx: 0.250, ry: 0.255 };
+const FACE = { y: 1.128, rx: 0.298, ry: 0.246 };
 
 const TAU = Math.PI * 2;
 
@@ -99,8 +99,8 @@ function fadeAt(y) {
 function faceMask(x, y, z, rz) {
   const d = Math.hypot(x / FACE.rx, (y - FACE.y) / FACE.ry);
   const front = Math.max(0, Math.min(1, (z / Math.max(rz, 1e-4) + 0.15) / 0.65));
-  const radial = 1 - Math.max(0, Math.min(1, (d - 0.30) / 1.05));
-  return Math.pow(radial, 1.45) * front;
+  const radial = Math.max(0, 1 - d / 1.22);
+  return Math.pow(radial, 1.75) * front;
 }
 
 function mulberry32(seed) {
@@ -117,9 +117,9 @@ function mulberry32(seed) {
 /* KIND: 0 band · 1 neck strand · 2 throat filament · 3 loose spark */
 export function buildHumanoid(opts = {}) {
   const bands = opts.bands ?? 112;
-  const density = opts.density ?? 132; // points per unit of circumference
+  const density = opts.density ?? 168; // points per unit of circumference
   const strandCount = opts.strands ?? 44;
-  const looseCount = opts.loose ?? 3400;
+  const looseCount = opts.loose ?? 2100;
   const rand = mulberry32(opts.seed ?? 20260906);
 
   const P = []; // target position
@@ -141,8 +141,8 @@ export function buildHumanoid(opts = {}) {
 
     for (let i = 0; i < count; i++) {
       // Jitter the angle so bands read as strings of dots, not solid rings.
-      const th = ((i + rand() * 0.75) / count) * TAU;
-      const wob = 1 + (rand() - 0.5) * 0.018;
+      const th = ((i + rand() * 0.35) / count) * TAU;
+      const wob = 1 + (rand() - 0.5) * 0.006;
       const x = Math.cos(th) * rx * wob;
       const z = Math.sin(th) * rz * wob;
 
@@ -211,10 +211,10 @@ export function buildHumanoid(opts = {}) {
      Particles streaming up off the crown. In the reference these read as
      part of the figure, which is exactly why they must NOT be part of the
      silhouette — they are their own thing. */
-  for (let i = 0; i < 620; i++) {
+  for (let i = 0; i < 520; i++) {
     const t = Math.pow(rand(), 0.65);
     const y = 1.80 + t * 0.21;
-    const spread = 0.045 + t * 0.13;
+    const spread = 0.075 + t * 0.26;
     const th = rand() * TAU;
     const rr = Math.pow(rand(), 0.5) * spread;
     const x = Math.cos(th) * rr;
