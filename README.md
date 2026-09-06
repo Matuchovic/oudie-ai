@@ -170,3 +170,46 @@ Všechno respektuje `prefers-reduced-motion`.
 | `.cn-root.cn-focus .cn-node` opacity | jak silně zhasne zbytek grafu |
 | `#flash` keyframes | průběh záblesku; swap je pevně na 200 ms |
 | `roster.js` → `x`, `y` | rozmístění uzlů ve viewBoxu 1600×900 |
+
+## Mobil
+
+Konstelace má **dvě sady souřadnic**. Na šířku 1600×900, na výšku 900×1500 —
+16:9 deska se na telefonu složí do nečitelného pruhu. Scéna se přestaví,
+až když se poměr stran skutečně překlopí; ostatní resize řeší viewBox, a
+přestavovat při každém pohnutí lišty prohlížeče by pokaždé znovu spustilo
+příchodovou animaci.
+
+Na výšku jdou popisky **pod uzly**. Vedle nich buď přejíždějí přes jádro,
+nebo utečou z obrazovky. Dotykové plochy jsou v portrait režimu větší,
+protože viewBox je na telefonu výrazně zmenšený.
+
+Karta agenta se na telefonu mění ve spodní sheet. Lišta scrolluje vodorovně
+místo aby přetékala, tlačítka mají 44 px.
+
+## PWA
+
+Ikony nejsou jedna zmenšenina. Každá platforma ořezává jinak:
+
+| soubor | k čemu | proč zrovna takhle |
+|---|---|---|
+| `icon-192/256/384/512` | manifest `any` | celá dlaždice včetně wordmarku |
+| `apple-touch-icon` | iOS | neprůhledná, rámeček odsazený o 4,5 %, aby ho squircle neuřízl |
+| `icon-maskable-*` | Android | jen postava na 72 %, Android ořezává do kruhu |
+| `favicon-16/32/48` | záložka | jen hlava — wordmark je v téhle velikosti kaše |
+
+Service worker drží shell offline, ale **nikdy nekešuje `/api/`, `/auth/`
+ani nic s tokenem** a při odhlášení dostane `oudie:purge` a smaže vše. Keš,
+která přežije odhlášení, je únik, kterého si nikdo nevšimne.
+
+## Přihlášení
+
+`components/auth/login.js` **záměrně neimplementuje autentizaci.** Vykreslí
+formulář a předá zadané údaje adaptéru. Heslo se nikde neukládá, neloguje
+ani nepřežije odeslání — nejjistější způsob, jak to zaručit, je nedržet ho.
+
+V produkci je adaptérem Supabase Auth. Do prohlížeče patří jen URL projektu
+a **anon key, který je veřejný záměrně** — chrání ho row level security.
+Service role key se v tomhle projektu nesmí objevit nikdy a nikde.
+
+Bez nastaveného adaptéru panel naskočí a řekne, že přihlašování není
+nastavené. Nepředstírá, že je někdo přihlášený.

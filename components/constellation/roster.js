@@ -23,6 +23,7 @@ export const AGENTS = [
   {
     id: 'chief',
     x: 585, y: 385, side: 'left', state: 'live',
+    mx: 150, my: 430, mside: 'right',
     cs: { name: 'Vedoucí kanceláře', role: 'Rozhodne, kdo úkol převezme, a hlídá, že se dotáhl.' },
     en: { name: 'Chief of staff', role: 'Decides who takes a task and makes sure it lands.' },
     can: ['route', 'summarise', 'follow-up'],
@@ -31,6 +32,7 @@ export const AGENTS = [
   {
     id: 'strategist',
     x: 690, y: 240, side: 'left', state: 'live',
+    mx: 450, my: 196, mside: 'right',
     cs: { name: 'Stratég', role: 'Rozebere rozhodnutí na varianty a řekne, co každá stojí.' },
     en: { name: 'Strategist', role: 'Breaks a decision into options and prices each one.' },
     can: ['compare', 'forecast', 'risk'],
@@ -39,6 +41,7 @@ export const AGENTS = [
   {
     id: 'research',
     x: 505, y: 300, side: 'left', state: 'live',
+    mx: 196, my: 300, mside: 'right',
     cs: { name: 'Rešeršista', role: 'Dohledá podklady a označí, čemu se dá věřit.' },
     en: { name: 'Researcher', role: 'Finds the sources and flags which ones hold up.' },
     can: ['web-search', 'read-doc', 'cite'],
@@ -47,6 +50,7 @@ export const AGENTS = [
   {
     id: 'finance',
     x: 1010, y: 305, side: 'right', state: 'live',
+    mx: 704, my: 300, mside: 'left',
     cs: { name: 'Finance', role: 'Hlídá faktury, splatnosti a co z toho zbyde.' },
     en: { name: 'Finance', role: 'Tracks invoices, due dates and what is left over.' },
     can: ['invoice', 'cashflow', 'due-dates'],
@@ -55,6 +59,7 @@ export const AGENTS = [
   {
     id: 'editor',
     x: 1300, y: 395, side: 'right', state: 'live',
+    mx: 750, my: 430, mside: 'left',
     cs: { name: 'Editor', role: 'Přepíše text tak, aby ho šlo poslat ven.' },
     en: { name: 'Editor', role: 'Rewrites text until it can go out the door.' },
     can: ['draft', 'rewrite', 'tone'],
@@ -63,6 +68,7 @@ export const AGENTS = [
   {
     id: 'memory',
     x: 1075, y: 470, side: 'right', state: 'live',
+    mx: 750, my: 596, mside: 'left',
     cs: { name: 'Paměť', role: 'Pamatuje si, co jsme řešili minule, a vytáhne to včas.' },
     en: { name: 'Memory', role: 'Remembers earlier decisions and surfaces them in time.' },
     can: ['recall', 'store', 'link'],
@@ -71,6 +77,7 @@ export const AGENTS = [
   {
     id: 'sales',
     x: 470, y: 490, side: 'left', state: 'busy',
+    mx: 150, my: 596, mside: 'right',
     cs: { name: 'Obchod', role: 'Sleduje rozjednané zakázky a připomene, kdo se dlouho neozval.' },
     en: { name: 'Sales', role: 'Watches open deals and flags who has gone quiet.' },
     can: ['pipeline', 'nudge', 'quote'],
@@ -79,6 +86,7 @@ export const AGENTS = [
   {
     id: 'marketing',
     x: 520, y: 545, side: 'left', state: 'busy',
+    mx: 150, my: 742, mside: 'right',
     cs: { name: 'Marketing', role: 'Plánuje, co kdy vyjde ven a komu to má dojít.' },
     en: { name: 'Marketing', role: 'Plans what goes out when, and who should see it.' },
     can: ['campaign', 'copy', 'schedule'],
@@ -87,6 +95,7 @@ export const AGENTS = [
   {
     id: 'ops',
     x: 600, y: 578, side: 'left', state: 'busy',
+    mx: 180, my: 884, mside: 'right',
     cs: { name: 'Provoz', role: 'Drží přehled o směnách, lidech a tom, co hoří.' },
     en: { name: 'Ops', role: 'Keeps shifts, people and whatever is on fire in view.' },
     can: ['shifts', 'incidents', 'roster'],
@@ -95,6 +104,7 @@ export const AGENTS = [
   {
     id: 'social',
     x: 795, y: 615, side: 'left', state: 'live',
+    mx: 258, my: 1022, mside: 'right',
     cs: { name: 'Sociální sítě', role: 'Publikuje a hlásí, na co lidi reagují.' },
     en: { name: 'Social', role: 'Publishes, and reports what people actually react to.' },
     can: ['post', 'engagement'],
@@ -103,6 +113,7 @@ export const AGENTS = [
   {
     id: 'engineering',
     x: 1000, y: 590, side: 'right', state: 'busy',
+    mx: 720, my: 884, mside: 'left',
     cs: { name: 'Inženýrství', role: 'Řeší, co je technicky únosné a co se rozbije.' },
     en: { name: 'Engineering', role: 'Works out what is buildable and what will break.' },
     can: ['spec', 'estimate', 'review'],
@@ -111,6 +122,7 @@ export const AGENTS = [
   {
     id: 'design',
     x: 1150, y: 545, side: 'right', state: 'busy',
+    mx: 750, my: 742, mside: 'left',
     cs: { name: 'Design', role: 'Navrhne, jak to má vypadat a proč zrovna takhle.' },
     en: { name: 'Design', role: 'Proposes how it should look, and argues for why.' },
     can: ['layout', 'brand', 'mockup'],
@@ -119,6 +131,7 @@ export const AGENTS = [
   {
     id: 'developer',
     x: 365, y: 605, side: 'left', state: 'off',
+    mx: 276, my: 1278, mside: 'right',
     cs: { name: 'Vývojář', role: 'Píše a nasazuje kód. Zatím nenapojeno.' },
     en: { name: 'Developer', role: 'Writes and ships code. Not connected yet.' },
     can: ['code', 'deploy', 'test'],
@@ -127,6 +140,7 @@ export const AGENTS = [
   {
     id: 'analytics',
     x: 655, y: 640, side: 'left', state: 'off',
+    mx: 210, my: 1152, mside: 'right',
     cs: { name: 'Analytika', role: 'Počítá čísla a hledá, kde se něco láme. Zatím nenapojeno.' },
     en: { name: 'Analytics', role: 'Crunches numbers and finds where things bend. Not connected yet.' },
     can: ['report', 'trend', 'anomaly'],
@@ -135,6 +149,7 @@ export const AGENTS = [
   {
     id: 'crm',
     x: 915, y: 655, side: 'right', state: 'live',
+    mx: 642, my: 1022, mside: 'left',
     cs: { name: 'CRM', role: 'Ví, kdo je kdo a kdy jsme spolu naposled mluvili.' },
     en: { name: 'CRM', role: 'Knows who is who and when you last spoke.' },
     can: ['contacts', 'history'],
@@ -143,6 +158,7 @@ export const AGENTS = [
   {
     id: 'calendar',
     x: 1250, y: 590, side: 'right', state: 'live',
+    mx: 690, my: 1152, mside: 'left',
     cs: { name: 'Kalendář', role: 'Vidí do diáře a najde, kdy máte oba čas.' },
     en: { name: 'Calendar', role: 'Reads the diary and finds when you are both free.' },
     can: ['read-events', 'find-slot', 'create-event'],
@@ -151,6 +167,7 @@ export const AGENTS = [
   {
     id: 'email',
     x: 1345, y: 520, side: 'right', state: 'off',
+    mx: 624, my: 1278, mside: 'left',
     cs: { name: 'Pošta', role: 'Třídí příchozí a upozorní na to, co nepočká. Zatím nenapojeno.' },
     en: { name: 'Email', role: 'Triages the inbox and flags what will not wait. Not connected yet.' },
     can: ['read-inbox', 'draft-reply'],
@@ -159,6 +176,7 @@ export const AGENTS = [
   {
     id: 'drive',
     x: 1290, y: 245, side: 'right', state: 'off',
+    mx: 450, my: 1392, mside: 'right',
     cs: { name: 'Úložiště', role: 'Hledá v dokumentech a zakládá nové. Zatím nenapojeno.' },
     en: { name: 'Drive', role: 'Searches your documents and files new ones. Not connected yet.' },
     can: ['search-files', 'read-file'],
@@ -168,6 +186,24 @@ export const AGENTS = [
 
 export const CORE = { x: 800, y: 400, r: 148 };
 export const VIEWBOX = { w: 1600, h: 900 };
+
+/* Portrait. A 16:9 board letterboxes into an unreadable strip on a phone,
+   so every agent carries a second position and the constellation picks by
+   aspect ratio. Same roster, same edges — only the coordinates differ. */
+export const CORE_M = { x: 450, y: 486, r: 118 };
+export const VIEWBOX_M = { w: 900, h: 1500 };
+
+/* Labels point inward-free: left column reads rightward, right column
+   reads leftward, so nothing runs off a narrow screen. */
+export function layoutFor(aspect) {
+  const portrait = aspect < 1.15;
+  return {
+    portrait,
+    core: portrait ? CORE_M : CORE,
+    box: portrait ? VIEWBOX_M : VIEWBOX,
+    pos: (a) => (portrait ? { x: a.mx, y: a.my, side: a.mside } : { x: a.x, y: a.y, side: a.side }),
+  };
+}
 
 /* Lookup by id, built once. The orchestrator will hit this on every turn. */
 export const BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a]));

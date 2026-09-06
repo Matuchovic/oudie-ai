@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Oudie — humanoid view</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Oudie</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#05070c">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Oudie">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
 <style>
   :root {
     --bg-top: #141a26;
@@ -68,12 +77,16 @@
     bottom: max(20px, env(safe-area-inset-bottom));
     display: flex; align-items: center; gap: 6px;
     padding: 6px;
+    max-width: calc(100vw - 16px);
+    overflow-x: auto;
+    scrollbar-width: none;
     border-radius: 999px;
-    background: rgba(10,16,28,.72);
+    background: rgba(10,16,28,.82);
     border: 1px solid rgba(53,198,255,.16);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
   }
+  #bar::-webkit-scrollbar { display: none; }
   button {
     appearance: none;
     border: 1px solid transparent;
@@ -108,6 +121,12 @@
     font-size: 10px; letter-spacing: .18em; color: rgba(127,166,189,.5);
     pointer-events: none;
   }
+  @media (max-width: 700px) {
+    #bar { gap: 2px; padding: 5px; }
+    button { min-height: 44px; padding: 11px 14px; font-size: 12px; letter-spacing: .05em; }
+    #diag, #hint { display: none; }
+    #status { right: 12px; font-size: 10px; letter-spacing: .16em; }
+  }
   @media (prefers-reduced-motion: reduce) { #hint { display: none; } }
 </style>
 </head>
@@ -124,7 +143,6 @@
     <button id="b-replay">REPLAY</button>
     <button id="b-listen" aria-pressed="true">LISTENING</button>
     <button id="b-speak" aria-pressed="false">SPEAKING</button>
-    <button id="b-safe">NO BLOOM</button>
     <button id="b-mic">MIC</button>
   </div>
 
@@ -154,6 +172,13 @@
   bListen.onclick = function () { api.setState('listening'); sync(); };
   bSpeak.onclick = function () { api.setState('speaking'); sync(); };
   var i18n = createI18n('cs');
+
+  // Gate first. With no adapter configured this shows the panel and says so
+  // rather than pretending anyone is signed in.
+  var login = createLogin({ i18n: i18n, logoSrc: 'logo.png', onSignedIn: function () {} });
+  login.gate();
+  window.__login = login;
+
   var sky = createConstellation(document.getElementById('sky'), {
     i18n: i18n,
     onSelect: function (a) { console.log('agent', a.id); }
@@ -192,14 +217,6 @@
   };
   i18n.onChange(applyView);
   applyView();
-
-  var bSafe = document.getElementById('b-safe');
-  var safe = false;
-  bSafe.onclick = function () {
-    safe = !safe;
-    api.setSafeMode(safe);
-    bSafe.setAttribute('aria-pressed', String(safe));
-  };
 
   var diagEl = document.getElementById('diag');
   setInterval(function () {

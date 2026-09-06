@@ -26,6 +26,8 @@ execFileSync(process.execPath, [resolve(root, 'scripts/lint-shaders.mjs')], {
 const bundle = [
   '/* --- rng.js --- */',
   strip('components/rng.js'),
+  '/* --- style.js --- */',
+  strip('components/style.js'),
   '/* --- geometry.js --- */',
   strip('components/humanoid/geometry.js'),
   '/* --- shaders.js --- */',
@@ -38,6 +40,8 @@ const bundle = [
   strip('components/i18n.js'),
   '/* --- roster.js --- */',
   strip('components/constellation/roster.js'),
+  '/* --- login.js --- */',
+  strip('components/auth/login.js'),
   '/* --- constellation.js --- */',
   strip('components/constellation/constellation.js'),
 ].join('\n\n');
@@ -101,3 +105,16 @@ for (const bad of ['import ', 'export ']) {
   }
 }
 console.log('bundle clean — no module syntax left');
+
+/* An unbalanced <style> block silently drops every rule after the damage —
+   that is how the buttons lost their styling once. Count braces. */
+{
+  const css = tpl.split('<style>')[1]?.split('</style>')[0] ?? '';
+  const open = (css.match(/\{/g) || []).length;
+  const close = (css.match(/\}/g) || []).length;
+  if (open !== close) {
+    console.error(`FAIL: template CSS braces unbalanced (${open} open, ${close} close)`);
+    process.exit(1);
+  }
+  console.log(`template CSS balanced (${open} rules)`);
+}

@@ -20,7 +20,6 @@ export default function HumanoidView({ onReady }) {
   const [state, setState] = useState('assembling');
   const [mic, setMic] = useState(null);
   const [diag, setDiag] = useState(null);
-  const [safe, setSafe] = useState(false);
   const [view, setView] = useState('team');
   const [lang, setLang] = useState('cs');
 
@@ -105,16 +104,6 @@ export default function HumanoidView({ onReady }) {
           onClick={() => apiRef.current?.setState('speaking')}
         >
           Speaking
-        </button>
-        <button
-          aria-pressed={safe}
-          onClick={() => {
-            const next = !safe;
-            setSafe(next);
-            apiRef.current?.setSafeMode(next);
-          }}
-        >
-          No bloom
         </button>
         <button
           aria-pressed={mic === true}

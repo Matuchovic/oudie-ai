@@ -33,12 +33,35 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
    by script never showed up. Nudging the window size forces a full
    repaint. Without this the harness silently reports stale frames, which
    is worse than no harness at all. */
+let frozen = false;
 async function repaint(win) {
+  if (!frozen) {
+    // CSS transitions need compositor frames to advance, and this harness
+    // does not produce them: an element could sit at opacity 0 for ever
+    // after its class was removed. Freeze transitions so captures show the
+    // settled state instead of a stalled one.
+    await win.webContents.executeJavaScript(
+      "var s=document.createElement('style');s.textContent='*{transition:none !important}';document.head.appendChild(s);'ok'"
+    ).catch(() => {});
+    frozen = true;
+  }
   const [w, h] = win.getSize();
   win.setSize(w + 1, h);
   await sleep(260);
   win.setSize(w, h);
-  await sleep(420);
+
+  // Resizing throws away the WebGL drawing buffer and every render target.
+  // Under SwiftShader a frame can take a full second, so a short wait here
+  // captures an empty canvas and looks exactly like a rendering bug. Wait
+  // for real frames instead of guessing.
+  await win.webContents.executeJavaScript(`
+    new Promise(res => {
+      let n = 0;
+      const tick = () => (++n >= 4 ? res(n) : requestAnimationFrame(tick));
+      requestAnimationFrame(tick);
+      setTimeout(() => res(n), 6000);
+    })`).catch(() => {});
+  await sleep(200);
 }
 
 app.whenReady().then(async () => {
@@ -111,7 +134,6 @@ app.whenReady().then(async () => {
     const img = await win.webContents.capturePage();
     fs.writeFileSync(path.join(OUT, `scan_${String(i).padStart(2, '0')}.png`), img.toPNG());
   }
-  await extra('08_safe', "document.getElementById('b-safe').click()");
   await extra('07_speaking', "document.getElementById('b-speak').click()");
 
   if (logs.length) console.log('CONSOLE:\n' + logs.join('\n'));
