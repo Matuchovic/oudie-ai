@@ -12,7 +12,7 @@ uniform float uTime;
 uniform float uProgress;    // 0..1 assembly
 uniform float uLevel;       // audio envelope 0..1
 uniform float uSpeaking;    // 0..1 blend toward the speaking look
-uniform float uPixelRatio;
+uniform float uScale;      // px per world unit at unit depth
 uniform vec3  uEmitter;
 
 attribute vec3  aTarget;
@@ -131,7 +131,7 @@ void main() {
 export const HALO_VERT = /* glsl */ `
 uniform float uTime;
 uniform float uLevel;
-uniform float uPixelRatio;
+uniform float uScale;
 
 attribute float aRing;
 attribute float aSeed;
@@ -150,7 +150,7 @@ void main() {
   vAlpha = (1.0 - phase) * (0.30 + uLevel * 0.75) * smoothstep(0.0, 0.16, phase);
 
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_PointSize = (1.05 + aSeed * 0.7) * uPixelRatio * (300.0 / max(0.1, -mv.z));
+  gl_PointSize = max(1.0, (0.0026 + aSeed * 0.0018) * uScale / max(0.1, -mv.z));
   gl_Position = projectionMatrix * mv;
 }
 `;

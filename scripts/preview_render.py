@@ -90,7 +90,7 @@ def render(az_deg, el_deg, radius, out):
     from scipy.ndimage import gaussian_filter
     tight = gaussian_filter(buf, sigma=(3, 3, 0))
     wide = gaussian_filter(buf, sigma=(11, 11, 0))
-    lit = buf + tight * 1.15 + wide * 0.85
+    lit = buf + tight * 0.78 + wide * 0.52
 
     yy = np.linspace(0, 1, H)[:, None, None]
     xx = np.linspace(0, 1, W)[None, :, None]
