@@ -72,7 +72,15 @@ app.whenReady().then(async () => {
     console.log(`--- ${name} ---\n${d}\n`);
   }
 
-  await extra('06_speaking', "document.getElementById('b-speak').click()");
+  // The sweep runs 2.5s out of every 7.5s, so a single grab misses it.
+  // Burst-capture and keep the brightest frame.
+  for (let i = 0; i < 9; i++) {
+    await sleep(420);
+    const img = await win.webContents.capturePage();
+    fs.writeFileSync(path.join(OUT, `scan_${String(i).padStart(2, '0')}.png`), img.toPNG());
+  }
+  await extra('08_safe', "document.getElementById('b-safe').click()");
+  await extra('07_speaking', "document.getElementById('b-speak').click()");
 
   if (logs.length) console.log('CONSOLE:\n' + logs.join('\n'));
 

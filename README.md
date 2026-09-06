@@ -92,7 +92,12 @@ a v názvu balíčku.
 | `shaders.js` → `float i = (...)` | první člen je jas mezer, `vRim` obrys, `f` obličej |
 | `shaders.js` → `vRim` exponent | nižší = širší měkčí obrys |
 | `runtime.js` → `bloom.setStrength(a, b)` | a = úzká záře, b = široké halo |
-| `bloom.js` → `top` / `bot` | pozadí; reference je téměř černá |
+| `runtime.js` → `bloom.setThreshold(t, knee)` | od jakého jasu se vůbec září. **Nízký práh = zamlžený obraz** — bez něj se rozmazávají i střední tóny a mezery mezi pásy se zaplní |
+| `shaders.js` → `vScan` | šířka scan pruhu; `runtime.js` → `SCAN_PERIOD` jak často jede |
+| `shaders.js` → `vTwinkle` | jemné jiskření bodů |
+| `shaders.js` → `breathe` | dýchání, ±0.45 % — víc už vypadá jako chyba |
+| `bloom.js` → `top` / `bot` | pozadí. Pozor: **lineární hodnoty**, gamma je na výstupu zvedne. 0.010 odejde jako 37/255, ne jako černá |
+| `bloom.js` → `* 1.35` v composite | expozice celé scény |
 
 ## Testování
 

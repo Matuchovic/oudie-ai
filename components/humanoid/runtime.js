@@ -100,6 +100,8 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uSpeaking: { value: 0 },
     uOpacity: { value: 1 },
     uScale: { value: 1000 },
+    uScan: { value: -99 },
+    uFlash: { value: 0 },
     uEmitter: { value: new THREE.Vector3().fromArray(H.emitter) },
     uSprite: { value: sprite },
   };
@@ -309,6 +311,15 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uniforms.uLevel.value = simLevel;
     haloUniforms.uLevel.value = simLevel;
 
+    // Scan sweep: a bright line runs up the body, then rests. Constant
+    // motion becomes wallpaper; a pulse every few seconds stays an event.
+    const SCAN_PERIOD = 7.5;
+    const sp = (t % SCAN_PERIOD) / SCAN_PERIOD;
+    uniforms.uScan.value = sp < 0.34 ? -1.1 + (sp / 0.34) * 2.6 : -99;
+
+    // Burst on completion, then decay.
+    uniforms.uFlash.value *= 0.90;
+
     const wantSpeaking = state === 'speaking' ? 1 : 0;
     uniforms.uSpeaking.value +=
       (wantSpeaking - uniforms.uSpeaking.value) * 0.08;
@@ -333,6 +344,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
         onStatus({ state, progress, label: `ASSEMBLING… ${pct}%` });
       }
       if (progress >= 1) {
+        uniforms.uFlash.value = 1;
         state = 'listening';
         onStatus({ state, progress: 1, label: 'STATUS: LISTENING' });
       }
@@ -371,6 +383,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     replay() {
       state = 'assembling';
       lastPct = -1;
+      uniforms.uFlash.value = 0;
       cam.dragAz = 0;
       cam.dragEl = 0;
       start = performance.now();
@@ -407,6 +420,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
       };
     },
     setBloom: (tight, wide) => bloom.setStrength(tight, wide),
+    setBloomThreshold: (t, knee) => bloom.setThreshold(t, knee),
     enableMic,
     dispose() {
       running = false;

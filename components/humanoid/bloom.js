@@ -20,6 +20,24 @@ void main() {
 }
 `;
 
+/* Bright-pass with a soft knee. Without this the blur smears mid-tones and
+   the whole frame hazes over: band gaps fill in and black lifts to grey.
+   Bloom is supposed to be what spills off the HIGHLIGHTS, nothing else. */
+const PREFILTER_FRAG = /* glsl */ `
+uniform sampler2D uTex;
+uniform float uThreshold;
+uniform float uKnee;
+varying vec2 vUv;
+void main() {
+  vec3 c = texture2D(uTex, vUv).rgb;
+  float l = max(c.r, max(c.g, c.b));
+  float soft = clamp(l - uThreshold + uKnee, 0.0, 2.0 * uKnee);
+  soft = (soft * soft) / (4.0 * uKnee + 1e-4);
+  float w = max(soft, l - uThreshold) / max(l, 1e-4);
+  gl_FragColor = vec4(c * w, 1.0);
+}
+`;
+
 /* 9-tap gaussian, separable. uDir is (1/w, 0) or (0, 1/h). */
 const BLUR_FRAG = /* glsl */ `
 uniform sampler2D uTex;
@@ -58,7 +76,7 @@ void main() {
   vec3 bloom = texture2D(uBloomA, vUv).rgb * uStrengthA
              + texture2D(uBloomB, vUv).rgb * uStrengthB;
 
-  vec3 c = bg + scene.rgb + bloom;
+  vec3 c = (bg + scene.rgb + bloom) * 1.35;   // exposure
   c = c / (c + vec3(0.85));            // filmic rolloff, keeps the core from clipping flat
 
   // The rolloff desaturates as it compresses. Push chroma back or the
@@ -131,6 +149,18 @@ export function createBloom(THREE, renderer, opts = {}) {
     depthWrite: false,
   });
 
+  const preMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTex: { value: null },
+      uThreshold: { value: 0.62 },
+      uKnee: { value: 0.22 },
+    },
+    vertexShader: QUAD_VERT,
+    fragmentShader: PREFILTER_FRAG,
+    depthTest: false,
+    depthWrite: false,
+  });
+
   const compMat = new THREE.ShaderMaterial({
     uniforms: {
       uScene: { value: null },
@@ -184,9 +214,13 @@ export function createBloom(THREE, renderer, opts = {}) {
       renderer.clear();
       renderer.render(sceneObj, camera);
 
+      // Extract highlights first, then blur only those.
+      preMat.uniforms.uTex.value = scene.texture;
+      pass(preMat, a1);
+
       // Tight glow at half res, then a second, wider pass at quarter res.
       // Two scales is what separates "glowing" from "blurry".
-      blur(scene, a2, a1, w >> 1, h >> 1);
+      blur(a1, a2, a1, w >> 1, h >> 1);
       blur(a1, b2, b1, w >> 2, h >> 2);
       blur(b1, b2, b1, w >> 2, h >> 2);
 
@@ -194,6 +228,11 @@ export function createBloom(THREE, renderer, opts = {}) {
       compMat.uniforms.uBloomA.value = a1.texture;
       compMat.uniforms.uBloomB.value = b1.texture;
       pass(compMat, null);
+    },
+
+    setThreshold(t, knee) {
+      preMat.uniforms.uThreshold.value = t;
+      preMat.uniforms.uKnee.value = knee;
     },
 
     setStrength(tight, wide) {
@@ -205,6 +244,7 @@ export function createBloom(THREE, renderer, opts = {}) {
       [scene, a1, a2, b1, b2].forEach((t) => t.dispose());
       quadGeo.dispose();
       blurMat.dispose();
+      preMat.dispose();
       compMat.dispose();
     },
   };

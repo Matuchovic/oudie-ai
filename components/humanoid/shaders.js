@@ -13,6 +13,8 @@ uniform float uProgress;    // 0..1 assembly
 uniform float uLevel;       // audio envelope 0..1
 uniform float uSpeaking;    // 0..1 blend toward the speaking look
 uniform float uScale;      // px per world unit at unit depth
+uniform float uScan;       // height of the travelling scan line, in model space
+uniform float uFlash;      // 1 -> 0 burst when the assembly completes
 uniform vec3  uEmitter;
 
 attribute vec3  aTarget;
@@ -31,6 +33,8 @@ varying float vKind;
 varying float vSeed;
 varying float vFade;
 varying float vFacing;
+varying float vScan;
+varying float vTwinkle;
 
 const float SPREAD = 0.74;  // how far the arrival wavefront is smeared
 const float TRAVEL = 0.26;  // how long one particle takes to fly in
@@ -42,6 +46,9 @@ void main() {
   float e = easeOutCubic(t);
 
   vec3 p = aTarget;
+  float breathe = sin(uTime * 0.55);
+  p.y *= 1.0 + breathe * 0.0045;
+  p.xz *= 1.0 + sin(uTime * 0.55 + 1.1) * 0.0032;
 
   // Band ripple. Amplitude climbs sharply inside the face mask and with
   // the audio envelope — that is the whole voice reactivity.
@@ -78,12 +85,20 @@ void main() {
   vSeed = aSeed;
   vFade = aFade;
 
+  // A bright line sweeping up the body. Cheap, and it is the single thing
+  // that most makes a static bust read as a live scan.
+  vScan = exp(-pow((aTarget.y - uScan) * 11.0, 2.0));
+
+  // Per-point shimmer so the surface never sits perfectly still.
+  vTwinkle = 0.82 + 0.18 * sin(uTime * 2.6 + aSeed * 43.0);
+
   // World units, NOT pixels. uScale does the conversion. Getting this
   // wrong by two orders of magnitude turns 50k dots into one white blob.
   float base = aKind > 2.5 ? 0.0042 : 0.0069;
   float size = base
              * (1.0 + vTravel * 2.4)
              * (1.0 + vRim * 1.5)
+             * (1.0 + vScan * 0.85 + uFlash * 0.6)
              * (0.7 + aSeed * 0.6);
   size *= 1.0 + aFace * (0.35 + uLevel * 1.1);
 
@@ -105,6 +120,9 @@ varying float vKind;
 varying float vSeed;
 varying float vFade;
 varying float vFacing;
+varying float vScan;
+varying float vTwinkle;
+uniform float uFlash;
 
 void main() {
   float a = texture2D(uSprite, gl_PointCoord).a;
@@ -123,6 +141,12 @@ void main() {
   c = mix(c, AMBER,  smoothstep(0.58, 0.86, f));
   c = mix(c, HOT,    smoothstep(0.90, 1.00, f));
   c = mix(c, ICE, vRim * 0.30);
+
+  // Dispersion at the extreme edge: the outermost sliver goes cold violet,
+  // which is what sells a hologram rather than a glowing outline.
+  c = mix(c, vec3(0.62, 0.72, 1.00), smoothstep(0.72, 1.0, vRim) * 0.45);
+
+  c = mix(c, vec3(0.86, 0.97, 1.00), vScan * 0.7 + uFlash * 0.5);
 
   // Throat filaments run amber regardless of the face mask.
   if (vKind > 1.5 && vKind < 2.5) c = mix(AMBER, HOT, vSeed * 0.65);
