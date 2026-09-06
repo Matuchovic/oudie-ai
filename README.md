@@ -293,3 +293,15 @@ Formulář nemá kartu ani rámečky — pole sedí na prázdnotě před postavo
 Řízené uniformou `uAffect` (pozornost, odmítnutí) a `setHalo()`. Všechny
 stavy jsou v jedné tabulce `MOODS`, takže se text, barva a chování postavy
 nemůžou rozejít.
+
+## Tři obrazovky
+
+`boot` → `login` → `app`. Řídí se přes `document.body.dataset.screen` a CSS,
+ne přes JavaScript, který by co skrýval — je vždy vidět **právě jedna**.
+
+Ostatní jsou `display: none`, ne jen průhledné. Průhledná vrstva pořád bere
+kliknutí a pořád nechává popisky nad tou pod sebou; přesně tak se boot text
+překryl se stavovým řádkem appky a konstelace prosvítala do přihlášení.
+
+Humanoid je ve všech třech **tentýž** — stejná instance, stejná geometrie.
+Mění se jen chrome kolem něj.

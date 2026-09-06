@@ -127,6 +127,23 @@
     #diag, #hint { display: none; }
     #status { right: 12px; font-size: 10px; letter-spacing: .16em; }
   }
+  /* Screen state machine. Exactly one screen is ever visible; the rest are
+     display:none rather than merely transparent, so nothing underneath can
+     take a click or leave a stray label on top of another screen. */
+  body[data-screen="boot"] #bar,
+  body[data-screen="boot"] #status,
+  body[data-screen="boot"] #hint,
+  body[data-screen="boot"] #sky,
+  body[data-screen="login"] #bar,
+  body[data-screen="login"] #status,
+  body[data-screen="login"] #hint,
+  body[data-screen="login"] #sky { display: none !important; }
+
+  body[data-screen="app"] .bt-root,
+  body[data-screen="login"] .bt-root { display: none !important; }
+  body[data-screen="app"] .au-root,
+  body[data-screen="boot"] .au-root { display: none !important; }
+
   @media (prefers-reduced-motion: reduce) { #hint { display: none; } }
 </style>
 </head>
@@ -224,15 +241,29 @@
   };
   i18n.onChange(applyView);
 
-  // Start on the face: the boot sequence is the first thing anyone sees.
+  function screen(name) { document.body.dataset.screen = name; }
+
+  // boot -> login -> app. The humanoid is the same instance throughout;
+  // only the chrome around it changes.
   view = 'face';
   api.setPaused(false);
   applyView();
+  screen('boot');
 
-  var login = createLogin({ i18n: i18n, face: api, onSignedIn: function () {} });
-  var boot = createBoot({ face: api, i18n: i18n, onDone: function () { login.gate(); } });
+  var login = createLogin({
+    i18n: i18n, face: api,
+    onSignedIn: function () { screen('app'); }
+  });
+  var boot = createBoot({
+    face: api, i18n: i18n,
+    onDone: function () {
+      screen('login');
+      login.gate().then(function (user) { if (user) screen('app'); });
+    }
+  });
   window.__login = login;
   window.__boot = boot;
+  window.__screen = screen;
   boot.run();
 
   var diagEl = document.getElementById('diag');

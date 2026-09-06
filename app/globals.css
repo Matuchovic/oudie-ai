@@ -122,3 +122,18 @@ html, body {
   100% { opacity: 0; transform: scale(1.4); }
 }
 @media (prefers-reduced-motion: reduce) { .flash.go { animation: none; } }
+
+/* Screen state machine. Exactly one screen is ever visible; the others are
+   display:none rather than merely transparent, so nothing underneath can
+   take a click or leave a stray label over another screen. */
+body[data-screen='boot'] .bar,
+body[data-screen='boot'] .status,
+body[data-screen='boot'] .sky,
+body[data-screen='login'] .bar,
+body[data-screen='login'] .status,
+body[data-screen='login'] .sky { display: none !important; }
+
+body[data-screen='app'] .bt-root,
+body[data-screen='login'] .bt-root { display: none !important; }
+body[data-screen='app'] .au-root,
+body[data-screen='boot'] .au-root { display: none !important; }

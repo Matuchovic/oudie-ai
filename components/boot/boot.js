@@ -52,7 +52,7 @@ const BOOT_CSS = `
 /* The integrations this app will actually lean on. Listing anything it
    does not use would make the boot screen a liar. */
 const CHECKS = {
-  cs: ['Roster agentu', 'Hlasova identita', 'Kalendar', 'Databaze', 'Posta', 'Kredity hlasu'],
+  cs: ['Roster agent\u016f', 'Hlasov\u00e1 identita', 'Kalend\u00e1\u0159', 'Datab\u00e1ze', 'Po\u0161ta', 'Kredity hlasu'],
   en: ['Agent roster', 'Voice identity', 'Calendar', 'Database', 'Mail', 'Voice credits'],
 };
 

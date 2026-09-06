@@ -44,9 +44,25 @@ export default function HumanoidView({ onReady }) {
     // Real auth when the keys are present, otherwise a panel that says so.
     // Boot first, then the gate. The humanoid is the loading screen, and
     // the same instance stays on screen behind the form.
-    const gate = createLogin({ i18n, face: api, auth: createSupabaseAuth() ?? stubAuth() });
+    const screen = (n) => { document.body.dataset.screen = n; };
+    screen('boot');
+
+    const gate = createLogin({
+      i18n,
+      face: api,
+      auth: createSupabaseAuth() ?? stubAuth(),
+      onSignedIn: () => screen('app'),
+    });
     loginRef.current = gate;
-    const boot = createBoot({ face: api, i18n, onDone: () => gate.gate() });
+
+    const boot = createBoot({
+      face: api,
+      i18n,
+      onDone: () => {
+        screen('login');
+        gate.gate().then((user) => { if (user) screen('app'); });
+      },
+    });
     bootRef.current = boot;
     boot.run();
     skyApi.current = createConstellation(skyRef.current, { i18n });
