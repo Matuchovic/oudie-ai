@@ -7,6 +7,7 @@ import { createConstellation } from './constellation/constellation.js';
 import { createI18n } from './i18n.js';
 import { createLogin, stubAuth } from './auth/login.js';
 import { createSupabaseAuth } from './auth/supabase.js';
+import { createBoot } from './boot/boot.js';
 
 /* Thin wrapper. All the work lives in runtime.js, which the standalone
    preview mounts too — so what you see in dist/apex-humanoid.html is
@@ -18,12 +19,13 @@ export default function HumanoidView({ onReady }) {
   const skyApi = useRef(null);
   const flashRef = useRef(null);
   const loginRef = useRef(null);
+  const bootRef = useRef(null);
   const apiRef = useRef(null);
   const [label, setLabel] = useState('ASSEMBLING… 0%');
   const [state, setState] = useState('assembling');
   const [mic, setMic] = useState(null);
   const [diag, setDiag] = useState(null);
-  const [view, setView] = useState('team');
+  const [view, setView] = useState('face');
   const [lang, setLang] = useState('cs');
   const [track, setTrack] = useState(false);
 
@@ -40,9 +42,13 @@ export default function HumanoidView({ onReady }) {
     i18nRef.current = i18n;
 
     // Real auth when the keys are present, otherwise a panel that says so.
-    const gate = createLogin({ i18n, auth: createSupabaseAuth() ?? stubAuth() });
-    gate.gate();
+    // Boot first, then the gate. The humanoid is the loading screen, and
+    // the same instance stays on screen behind the form.
+    const gate = createLogin({ i18n, face: api, auth: createSupabaseAuth() ?? stubAuth() });
     loginRef.current = gate;
+    const boot = createBoot({ face: api, i18n, onDone: () => gate.gate() });
+    bootRef.current = boot;
+    boot.run();
     skyApi.current = createConstellation(skyRef.current, { i18n });
     skyApi.current.show();
     const stopLang = i18n.onChange(setLang);
@@ -53,6 +59,7 @@ export default function HumanoidView({ onReady }) {
     return () => {
       clearInterval(t);
       stopLang();
+      bootRef.current?.dispose();
       loginRef.current?.dispose();
       skyApi.current?.dispose();
       api.dispose();

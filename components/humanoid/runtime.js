@@ -110,6 +110,7 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     uScale: { value: 1000 },
     uScan: { value: -99 },
     uLook: { value: new THREE.Vector2(0, 0) },
+    uAffect: { value: new THREE.Vector2(0, 0) },
     uFlash: { value: 0 },
     uEmitter: { value: new THREE.Vector3().fromArray(H.emitter) },
     uSprite: { value: sprite },
@@ -280,6 +281,8 @@ export function createHumanoid(THREE, canvas, opts = {}) {
   let fpsAt = performance.now();
   let drawCalls = 0;
   let paused = false;
+  let haloHold = false;
+  const moodTarget = new THREE.Vector2(0, 0);
 
   // Camera tracking is opt-in and entirely optional; everything below works
   // untouched when it is never started or gets refused.
@@ -342,6 +345,10 @@ export function createHumanoid(THREE, canvas, opts = {}) {
 
     // Where the head is looking. Without the camera this stays at zero and
     // the idle breathing is the only motion.
+    // Mood eases rather than snapping: a face that changes instantly reads
+    // as a state machine, one that takes a beat reads as a reaction.
+    uniforms.uAffect.value.lerp(moodTarget, 0.09);
+
     const tv = tracker.value;
     uniforms.uLook.value.set(
       tv.active ? tv.x * MAX_YAW : 0,
@@ -353,8 +360,10 @@ export function createHumanoid(THREE, canvas, opts = {}) {
       (wantSpeaking - uniforms.uSpeaking.value) * 0.08;
 
     // Halo rings are the listening ripple. They retract while speaking.
-    const wantHalo = state === 'listening' ? 1 : 0;
-    haloUniforms.uOpacity.value += (wantHalo - haloUniforms.uOpacity.value) * 0.05;
+    if (!haloHold) {
+      const wantHalo = state === 'listening' ? 1 : 0;
+      haloUniforms.uOpacity.value += (wantHalo - haloUniforms.uOpacity.value) * 0.05;
+    }
 
     // Emitter burns through the assembly and dies at the end.
     const eOp = assembling ? 1 - clamp01((progress - 0.8) / 0.16) : 0;
@@ -437,6 +446,13 @@ export function createHumanoid(THREE, canvas, opts = {}) {
     isTracking: () => tracker.isRunning,
     /* For tests and for driving the head from something other than a camera. */
     setLook: (yaw, pitch) => uniforms.uLook.value.set(yaw, pitch),
+    /* Attention and refusal, for the login to drive. Kept separate from
+       the audio level so a focused field cannot be mistaken for speech. */
+    setMood: (attention, alert) => moodTarget.set(attention, alert),
+    /* Halo strength, so the sign-in ring can breathe with the form. */
+    setHalo: (v) => { haloUniforms.uOpacity.value = v; haloHold = v >= 0; },
+    releaseHalo: () => { haloHold = false; },
+    getLevel: () => uniforms.uLevel.value,
     setSafeMode(on) {
       safeMode = on;
       renderer.setClearColor(0x05070c, on ? 1 : 0);

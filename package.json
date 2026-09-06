@@ -10,10 +10,10 @@
     "preview": "node scripts/build-standalone.mjs && echo 'open dist/oudie-humanoid.html'"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
-    "next": "^15.5.25",
+    "next": "15.1.9",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "three": "0.172.0"
+    "three": "0.172.0",
+    "@supabase/supabase-js": "^2.45.4"
   }
 }

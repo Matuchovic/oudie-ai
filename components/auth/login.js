@@ -1,92 +1,97 @@
 /* ------------------------------------------------------------------
    Login
 
-   This file deliberately does NOT implement authentication. It renders a
-   form and hands what the person typed straight to an adapter.
+   This file renders a form and hands what was typed to an adapter. It
+   deliberately does not implement authentication: a password must never
+   be stored, logged, or outlive the submit, and the surest way to
+   guarantee that is not to be the thing holding it. Supabase Auth is the
+   adapter in production; its client does the exchange and owns the
+   session.
 
-   Why that matters here: a password must never be stored, logged, kept in
-   a variable that outlives the submit, or written to a cache. The safe way
-   to get that guarantee is to not be the one holding it. The adapter is
-   Supabase Auth in production — its client takes the credentials, does the
-   exchange over TLS and owns the session.
+   Keys: only the project URL and the anon key belong in a browser, and
+   the anon key is public by design — row level security decides what it
+   can reach. The service role key must never appear in this project.
 
-   Keys: only the Supabase URL and the anon key belong in the browser, and
-   the anon key is public by design — it is safe precisely because row
-   level security decides what it can reach. The service role key must
-   never appear in this project, in any file, at any time.
+   The visual idea: there is no card. The fields sit on the void in front
+   of the humanoid, and the humanoid answers the form. Focus a field and
+   it brightens and leans in. Get the password wrong and its face cools to
+   red before you have read the message. Sign in and the halo opens
+   outward and the form dissolves through it.
    ------------------------------------------------------------------ */
 
 import { injectOnce } from '../style.js';
 
 const LOGIN_CSS = `
-.au-root{position:fixed;inset:0;z-index:80;display:grid;place-items:center;
-  padding:24px calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom))
-    calc(24px + env(safe-area-inset-left));
-  background:radial-gradient(120% 90% at 50% 0%,#101827 0%,#05070c 68%);
+.au-root{position:fixed;inset:0;z-index:80;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 clamp(22px,7vw,64px) calc(env(safe-area-inset-bottom,0px) + 34px);
   font:400 15px/1.55 ui-sans-serif,-apple-system,"Segoe UI",system-ui,sans-serif;
-  color:#d9ecfa}
+  color:#d9ecfa;pointer-events:none;
+  opacity:0;transition:opacity .7s cubic-bezier(.16,1,.3,1)}
+.au-root.au-on{opacity:1;pointer-events:auto}
 .au-root[hidden]{display:none}
 
-.au-box{width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
-.au-mark{display:flex;justify-content:center;margin-bottom:2px}
-.au-logo{width:min(190px,44vw);height:auto;
-  filter:drop-shadow(0 0 34px rgba(56,189,248,.35))}
-@media (max-height:680px){.au-logo{width:min(130px,32vw)}}
-.au-lead{margin:0 0 10px;color:#8fb4cd;text-align:center}
+/* Desktop has room to put the form beside the figure instead of under it. */
+@media (min-width:900px) and (orientation:landscape){
+  .au-root{justify-content:center;align-items:flex-end;padding-bottom:0}
+  .au-box{margin-right:max(4vw,40px)}
+}
 
-.au-field{display:flex;flex-direction:column;gap:6px}
-.au-field label{font:600 10px ui-monospace,monospace;letter-spacing:.16em;
-  text-transform:uppercase;color:#5f86a5}
+.au-box{width:min(430px,100%)}
+
+.au-status{font:600 10.5px ui-monospace,monospace;letter-spacing:.22em;
+  text-transform:uppercase;color:#f0c34a;margin:0 0 18px;
+  transition:color .4s}
+
+.au-field{margin-bottom:16px}
+.au-field label{display:block;font:600 9.5px ui-monospace,monospace;
+  letter-spacing:.22em;text-transform:uppercase;color:#4a6b83;margin-bottom:5px;
+  transition:color .3s}
 .au-field input{
   appearance:none;-webkit-appearance:none;
-  background:rgba(10,20,34,.9);color:#eaf6ff;
-  border:1px solid rgba(56,189,248,.22);border-radius:12px;
-  /* 16px keeps iOS Safari from zooming the page on focus. */
-  font:400 16px/1.4 inherit;padding:14px 15px;min-height:52px;width:100%}
-.au-field input:focus{outline:none;border-color:rgba(56,189,248,.7);
-  box-shadow:0 0 0 3px rgba(56,189,248,.14)}
+  width:100%;background:transparent;color:#eaf6ff;
+  border:0;border-bottom:1px solid rgba(56,189,248,.26);
+  border-radius:0;padding:8px 2px;
+  /* 16px stops iOS Safari zooming the page when a field takes focus. */
+  font:400 16px/1.4 inherit;
+  transition:border-color .3s}
+.au-field input::placeholder{color:#33556b}
+.au-field input:focus{outline:none;border-bottom-color:rgba(56,189,248,.9)}
+.au-field.au-live label{color:#7fc4e8}
 
+.au-msg{margin:0 0 14px;min-height:18px;font-size:13px;color:#e2665a;
+  opacity:0;transform:translateY(-3px);transition:opacity .3s,transform .3s}
+.au-msg.au-show{opacity:1;transform:none}
+
+.au-actions{display:flex;align-items:center;gap:14px}
 .au-btn{appearance:none;-webkit-appearance:none;cursor:pointer;
-  min-height:52px;border-radius:999px;font:600 15px inherit;
-  border:1px solid transparent;transition:background .18s,border-color .18s,color .18s}
-.au-primary{background:#1c7fb8;border-color:#2b9fdd;color:#fff}
-.au-primary:hover:not(:disabled){background:#2790cd}
-.au-primary:disabled{opacity:.55;cursor:default}
-.au-ghost{background:transparent;border-color:rgba(56,189,248,.3);color:#9fd0ea}
-.au-ghost:hover{color:#fff;border-color:rgba(56,189,248,.65)}
-.au-btn:focus-visible{outline:2px solid #35c6ff;outline-offset:2px}
+  background:transparent;font:500 14px inherit;letter-spacing:.04em;
+  border:1px solid rgba(56,189,248,.42);border-radius:999px;
+  color:#9fd4f0;min-height:50px;padding:0 26px;flex:1;
+  transition:border-color .3s,color .3s,background .3s}
+.au-btn:hover:not(:disabled){border-color:rgba(56,189,248,.85);color:#e2f5ff}
+.au-btn:disabled{opacity:.5;cursor:default}
+.au-btn.au-ghost{flex:0 0 auto;border-color:rgba(95,134,165,.28);color:#6f93ae;
+  font-size:13px;padding:0 20px}
+.au-btn.au-ghost:hover{color:#cfe6f5;border-color:rgba(95,134,165,.6)}
+.au-btn:focus-visible{outline:2px solid #35c6ff;outline-offset:3px}
+.au-or{font:600 9.5px ui-monospace,monospace;letter-spacing:.2em;color:#3d5a70}
 
-.au-sep{display:flex;align-items:center;gap:12px;color:#456980;
-  font:600 10px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
-.au-sep::before,.au-sep::after{content:"";flex:1;height:1px;background:rgba(56,189,248,.16)}
+.au-foot{margin:18px 0 0;font-size:11.5px;color:#3f5f76}
 
-.au-msg{margin:0;min-height:20px;font-size:13.5px;color:#ff9a7a}
-.au-msg.au-ok{color:#7fd4a0}
-.au-foot{margin:4px 0 0;font-size:12.5px;color:#4d6d84}
+/* The one moment of motion: on success the ring opens outward and the
+   form goes through it rather than being replaced by a spinner. */
+.au-root.au-out .au-box{opacity:0;transform:translateY(10px) scale(.98);
+  transition:opacity .5s,transform .5s}
 `;
 
-
-/* The wordmark is part of the artwork, so the login leads with the logo
-   itself rather than repeating the name beside a small glyph. The path is
-   configurable because the standalone build runs from file://, where a
-   leading slash points at the filesystem root rather than the app. */
-const mark = (src) => `<img class="au-logo" src="${src}" alt="Oudie — HumanoidAI Auren"
-  width="190" height="190" decoding="async">`;
-
 /* The adapter contract. Anything satisfying this works — Supabase in
-   production, a stub in development. Nothing below ever sees a session
-   token; the adapter owns it. */
+   production, this stub in development. Nothing here ever sees a token. */
 export function stubAuth() {
   return {
-    async signIn() {
-      throw new Error('AUTH_NOT_CONFIGURED');
-    },
-    async signInWithGoogle() {
-      throw new Error('AUTH_NOT_CONFIGURED');
-    },
-    async currentUser() {
-      return null;
-    },
+    async signIn() { throw new Error('AUTH_NOT_CONFIGURED'); },
+    async signInWithGoogle() { throw new Error('AUTH_NOT_CONFIGURED'); },
+    async currentUser() { return null; },
     async signOut() {},
   };
 }
@@ -95,81 +100,113 @@ export function createLogin(opts = {}) {
   injectOnce('login', LOGIN_CSS);
   const auth = opts.auth ?? stubAuth();
   const i18n = opts.i18n;
+  const face = opts.face ?? null;      // the humanoid runtime, optional
   const onSignedIn = opts.onSignedIn ?? (() => {});
 
   const cs = i18n?.lang !== 'en';
   const T = cs
-    ? { lead: 'Přihlas se a Oudie si tě zapamatuje.', email: 'E-mail', pass: 'Heslo',
-        go: 'Přihlásit se', google: 'Pokračovat přes Google', or: 'nebo',
-        working: 'Přihlašuji…', bad: 'Nesprávný e-mail nebo heslo.',
-        missing: 'Vyplň e-mail i heslo.',
-        notset: 'Přihlašování zatím není nastavené. Chybí Supabase klíče.',
+    ? { locked: 'Zamčeno', listening: 'Poslouchá', denied: 'Odmítnuto', welcome: 'Vítej',
+        email: 'E-mail', pass: 'Heslo', go: 'Probudit', google: 'Google', or: 'nebo',
+        working: 'Ověřuji', bad: 'Nesprávný e-mail nebo heslo.', missing: 'Vyplň obojí.',
+        notset: 'Přihlašování zatím není nastavené.',
         foot: 'Heslo se nikde neukládá ani neloguje.' }
-    : { lead: 'Sign in and Oudie will remember you.', email: 'Email', pass: 'Password',
-        go: 'Sign in', google: 'Continue with Google', or: 'or',
-        working: 'Signing in…', bad: 'Wrong email or password.',
-        missing: 'Enter both email and password.',
-        notset: 'Sign-in is not configured yet. Supabase keys are missing.',
+    : { locked: 'Locked', listening: 'Listening', denied: 'Denied', welcome: 'Welcome',
+        email: 'Email', pass: 'Password', go: 'Wake up', google: 'Google', or: 'or',
+        working: 'Checking', bad: 'Wrong email or password.', missing: 'Fill in both.',
+        notset: 'Sign-in is not configured yet.',
         foot: 'Your password is never stored or logged.' };
 
   const root = document.createElement('div');
   root.className = 'au-root';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
+  root.hidden = true;
   root.innerHTML = `
     <div class="au-box">
-      <div class="au-mark">${mark(opts.logoSrc ?? '/logo.png')}</div>
-      <p class="au-lead">${T.lead}</p>
-      <div class="au-field">
+      <p class="au-status" role="status" aria-live="polite">${T.locked}</p>
+      <div class="au-field" data-f="email">
         <label for="au-email">${T.email}</label>
-        <input id="au-email" type="email" autocomplete="email"
-               inputmode="email" autocapitalize="off" spellcheck="false" required>
+        <input id="au-email" type="email" autocomplete="email" inputmode="email"
+               autocapitalize="off" spellcheck="false" placeholder="ty@firma.cz" required>
       </div>
-      <div class="au-field">
+      <div class="au-field" data-f="pass">
         <label for="au-pass">${T.pass}</label>
         <input id="au-pass" type="password" autocomplete="current-password" required>
       </div>
-      <p class="au-msg" role="status" aria-live="polite"></p>
-      <button class="au-btn au-primary" type="button" data-go>${T.go}</button>
-      <div class="au-sep">${T.or}</div>
-      <button class="au-btn au-ghost" type="button" data-google>${T.google}</button>
+      <p class="au-msg"></p>
+      <div class="au-actions">
+        <button class="au-btn" type="button" data-go>${T.go}</button>
+        <span class="au-or">${T.or}</span>
+        <button class="au-btn au-ghost" type="button" data-google>${T.google}</button>
+      </div>
       <p class="au-foot">${T.foot}</p>
-      ${opts.previewSkip ? `<button class="au-btn au-ghost" type="button" data-skip
-        style="min-height:40px;font-size:13px;opacity:.7">${cs ? 'Prohlédnout bez přihlášení' : 'Look around without signing in'}</button>` : ''}
     </div>`;
-  // Hidden until something asks for it. Created visible, it would flash over
-  // the app on every load before gate() had a chance to resolve the session.
-  root.hidden = true;
   document.body.appendChild(root);
 
   const email = root.querySelector('#au-email');
   const pass = root.querySelector('#au-pass');
+  const status = root.querySelector('.au-status');
   const msg = root.querySelector('.au-msg');
   const goBtn = root.querySelector('[data-go]');
 
-  function say(text, ok = false) {
-    msg.textContent = text;
-    msg.classList.toggle('au-ok', ok);
+  /* Every visual state in one place, so the copy, the colour and what the
+     humanoid does can never disagree with each other. */
+  const MOODS = {
+    locked:   { text: T.locked,    col: '#f0c34a', attention: 0,    alert: 0,   halo: 0.16 },
+    focused:  { text: T.listening, col: '#38bdf8', attention: 0.85, alert: 0,   halo: 0.55 },
+    checking: { text: T.working,   col: '#38bdf8', attention: 1,    alert: 0,   halo: 0.75 },
+    denied:   { text: T.denied,    col: '#e2665a', attention: 0.3,  alert: 1,   halo: 0.5 },
+    welcome:  { text: T.welcome,   col: '#7fdcff', attention: 1,    alert: 0,   halo: 1 },
+  };
+
+  let mood = 'locked';
+  function setMood(name) {
+    const m = MOODS[name];
+    if (!m) return;
+    mood = name;
+    status.textContent = m.text;
+    status.style.color = m.col;
+    face?.setMood?.(m.attention, m.alert);
+    face?.setHalo?.(m.halo);
   }
 
-  function fail(err) {
-    say(err?.message === 'AUTH_NOT_CONFIGURED' ? T.notset : T.bad);
+  function say(text) {
+    msg.textContent = text;
+    msg.classList.toggle('au-show', !!text);
+  }
+
+  for (const f of root.querySelectorAll('.au-field')) {
+    const input = f.querySelector('input');
+    input.addEventListener('focus', () => {
+      f.classList.add('au-live');
+      if (mood !== 'checking') setMood('focused');
+    });
+    input.addEventListener('blur', () => {
+      f.classList.remove('au-live');
+      if (mood === 'focused' && !root.querySelector('.au-field.au-live')) setMood('locked');
+    });
+    // Clearing the refusal as soon as they start fixing it: leaving the
+    // face red while someone retypes reads as the app sulking.
+    input.addEventListener('input', () => {
+      if (mood === 'denied') { say(''); setMood('focused'); }
+    });
   }
 
   async function submit() {
-    if (!email.value.trim() || !pass.value) return say(T.missing);
+    if (!email.value.trim() || !pass.value) { say(T.missing); return; }
     goBtn.disabled = true;
-    say(T.working, true);
+    say('');
+    setMood('checking');
     try {
       const user = await auth.signIn(email.value.trim(), pass.value);
-      // Drop the credential the moment it has been handed over. It must not
-      // survive in a DOM node for the rest of the session.
-      pass.value = '';
-      hide();
-      onSignedIn(user);
+      pass.value = '';                       // drop it the moment it is handed over
+      setMood('welcome');
+      root.classList.add('au-out');
+      setTimeout(() => { hide(); onSignedIn(user); }, 620);
     } catch (err) {
       pass.value = '';
-      fail(err);
+      setMood('denied');
+      say(err?.message === 'AUTH_NOT_CONFIGURED' ? T.notset : T.bad);
     } finally {
       goBtn.disabled = false;
     }
@@ -178,30 +215,46 @@ export function createLogin(opts = {}) {
   goBtn.addEventListener('click', submit);
   pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
   email.addEventListener('keydown', (e) => { if (e.key === 'Enter') pass.focus(); });
-  root.querySelector('[data-skip]')?.addEventListener('click', () => hide());
   root.querySelector('[data-google]').addEventListener('click', async () => {
-    try { await auth.signInWithGoogle(); } catch (err) { fail(err); }
+    setMood('checking');
+    try { await auth.signInWithGoogle(); }
+    catch (err) {
+      setMood('denied');
+      say(err?.message === 'AUTH_NOT_CONFIGURED' ? T.notset : T.bad);
+    }
   });
 
-  function show() { root.hidden = false; setTimeout(() => email.focus(), 60); }
-  function hide() { root.hidden = true; }
+  function show() {
+    root.hidden = false;
+    root.classList.remove('au-out');
+    requestAnimationFrame(() => root.classList.add('au-on'));
+    setMood('locked');
+    setTimeout(() => email.focus({ preventScroll: true }), 300);
+  }
+
+  function hide() {
+    root.classList.remove('au-on');
+    face?.releaseHalo?.();
+    face?.setMood?.(0, 0);
+    setTimeout(() => { root.hidden = true; }, 700);
+  }
 
   return {
     show,
     hide,
-    /* Resolve who is signed in before showing anything. Returns the user
-       or null, and puts the gate up when there is nobody. */
+    /* Resolve who is signed in before showing anything, so a returning
+       session never sees the form flash past. */
     async gate() {
       try {
         const user = await auth.currentUser();
-        if (user) { hide(); return user; }
-      } catch { /* treat any failure as signed out */ }
+        if (user) { root.hidden = true; return user; }
+      } catch { /* any failure counts as signed out */ }
       show();
       return null;
     },
     async signOut() {
       await auth.signOut();
-      // A cached shell that outlives a sign-out is a quiet leak.
+      // A cached shell outliving a sign-out is a quiet leak.
       navigator.serviceWorker?.controller?.postMessage('oudie:purge');
       show();
     },

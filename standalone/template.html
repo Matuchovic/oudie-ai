@@ -133,6 +133,7 @@
 <body>
   <div id="stage"><canvas id="c"></canvas></div>
   <div id="sky"></div>
+  <div id="boot"></div>
   <div id="flash"></div>
   <div id="status">ASSEMBLING… 0%</div>
   <div id="diag"></div>
@@ -173,12 +174,6 @@
 
   var i18n = createI18n('cs');
 
-  // Gate first. With no adapter configured this shows the panel and says so
-  // rather than pretending anyone is signed in.
-  // The standalone file is a design preview with no backend to sign in to,
-  // so the gate only appears on request. The app itself always gates.
-  var login = createLogin({ i18n: i18n, logoSrc: 'logo.png', previewSkip: true, onSignedIn: function () {} });
-  login.gate();
   window.__login = login;
 
   var sky = createConstellation(document.getElementById('sky'), {
@@ -228,7 +223,17 @@
     applyView();
   };
   i18n.onChange(applyView);
+
+  // Start on the face: the boot sequence is the first thing anyone sees.
+  view = 'face';
+  api.setPaused(false);
   applyView();
+
+  var login = createLogin({ i18n: i18n, face: api, onSignedIn: function () {} });
+  var boot = createBoot({ face: api, i18n: i18n, onDone: function () { login.gate(); } });
+  window.__login = login;
+  window.__boot = boot;
+  boot.run();
 
   var diagEl = document.getElementById('diag');
   setInterval(function () {

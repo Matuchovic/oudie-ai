@@ -16,6 +16,7 @@ uniform float uScale;      // px per world unit at unit depth
 uniform float uScan;       // height of the travelling scan line, in model space
 uniform float uFlash;      // 1 -> 0 burst when the assembly completes
 uniform vec2  uLook;       // yaw, pitch in radians — where the head is turned
+uniform vec2  uAffect;       // x = attention (face brightens), y = alert (face cools to red)
 uniform vec3  uEmitter;
 
 attribute vec3  aTarget;
@@ -135,6 +136,7 @@ uniform sampler2D uSprite;
 uniform float uLevel;
 uniform float uSpeaking;
 uniform float uOpacity;
+uniform vec2  uAffect;
 
 varying float vFace;
 varying float vRim;

@@ -42,6 +42,8 @@ const bundle = [
   strip('components/i18n.js'),
   '/* --- roster.js --- */',
   strip('components/constellation/roster.js'),
+  '/* --- boot.js --- */',
+  strip('components/boot/boot.js'),
   '/* --- login.js --- */',
   strip('components/auth/login.js'),
   '/* --- constellation.js --- */',

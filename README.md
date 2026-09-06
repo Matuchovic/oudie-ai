@@ -259,3 +259,37 @@ místo aby si vyžádala 720p a zahodila je.
 
 Rozpočet framebufferu je 2,6 milionu pixelů; na 5K displeji se DPR sníží,
 místo aby bloom žvýkal čtrnáct milionů pixelů na snímek.
+
+## Boot a přihlášení
+
+Loading obrazovka **je** sestavení. Nic se nepředstírá: procento je skutečný
+postup 57 tisíc částic a odškrtávané položky jsou integrace, na kterých
+appka bude reálně stát. Vypisovat tam něco, co nepoužívá, by z boot screenu
+udělalo lháře.
+
+Jediná divadelní věc je hlava. Zůstane sklopená, dokud se postava staví —
+zaneprázdněná, ještě o tobě neví — a přes posledních 45 % se zvedne tak, aby
+dorazila do vodorovné polohy přesně ve chvíli dokončení. Pak vteřina ticha
+a teprve potom formulář.
+
+Ta vteřina je podstatná. Bez ní formulář ten okamžik sežere dřív, než ho
+stihneš zaregistrovat.
+
+**Je to tentýž humanoid**, ne kopie. Stejná instance `createHumanoid`, stejná
+geometrie, stejný shader. Boot jen řídí `setLook()`.
+
+### Login reaguje
+
+Formulář nemá kartu ani rámečky — pole sedí na prázdnotě před postavou.
+
+| stav | co udělá humanoid |
+|---|---|
+| klid | tlumená tvář, slabá svatozář |
+| zaostřené pole | tvář se rozjasní, svatozář se rozšíří, stav „Poslouchá" |
+| ověřuji | plná pozornost |
+| odmítnuto | tvář zchladne do červené, tělo ztmavne |
+| vpuštěn | svatozář se rozletí a formulář jí projde |
+
+Řízené uniformou `uAffect` (pozornost, odmítnutí) a `setHalo()`. Všechny
+stavy jsou v jedné tabulce `MOODS`, takže se text, barva a chování postavy
+nemůžou rozejít.
